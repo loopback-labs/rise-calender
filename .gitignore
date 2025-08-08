@@ -1,0 +1,34 @@
+# Xcode
+xcuserdata/
+build/
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM
+*.xcworkspace
+
+# Swift Package Manager
+.build/
+
+# Dependencies
+Carthage/Build/
+Dependencies/
+
+# fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# macOS
+.DS_Store
+._*
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+
+# Project specific
+rise/Config/OAuthConfig.plist
+buildServer.json
+scripts/*.env

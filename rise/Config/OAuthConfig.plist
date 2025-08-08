@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CLIENT_ID</key>
+    <string>OPTIONAL_WHEN_USING_ENV_VARS.apps.googleusercontent.com</string>
+    <key>REDIRECT_SCHEME</key>
+    <string>com.googleusercontent.apps.OPTIONAL_WHEN_USING_ENV_VARS</string>
+    <!-- 
+    This file is optional when using environment variables.
+    Set GOOGLE_CLIENT_ID and GOOGLE_REDIRECT_SCHEME environment variables instead.
+    This file serves as a fallback only.
+    -->
+</dict>
+</plist>
+
+
