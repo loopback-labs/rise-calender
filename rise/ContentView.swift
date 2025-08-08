@@ -5,6 +5,7 @@ struct ContentView: View {
   @StateObject var vm: AppViewModel
   @State private var selectedEvent: CalendarEvent?
   @State private var isDetailSidebarVisible = false
+  @State private var popoverAnchorPoint: CGPoint?
 
   var body: some View {
     NavigationSplitView(
@@ -15,22 +16,34 @@ struct ContentView: View {
         MainCalendarContent(
           vm: vm,
           selectedEvent: $selectedEvent,
-          isDetailSidebarVisible: $isDetailSidebarVisible
+          isDetailSidebarVisible: $isDetailSidebarVisible,
+          popoverAnchorPoint: $popoverAnchorPoint
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-      },
-      detail: {
-        if isDetailSidebarVisible {
-          EventDetailSidebar(
-            event: selectedEvent,
-            onDismiss: {
+        .background(
+          AnchoredPopover(
+            isPresented: $isDetailSidebarVisible,
+            anchorPointInWindow: popoverAnchorPoint,
+            onClose: {
               selectedEvent = nil
               isDetailSidebarVisible = false
             }
-          )
-          .frame(minWidth: 280)
-        }
-      }
+          ) {
+            if let event = selectedEvent {
+              EventDetailPopover(
+                event: event,
+                onDismiss: {
+                  selectedEvent = nil
+                  isDetailSidebarVisible = false
+                }
+              )
+            } else {
+              EmptyView()
+            }
+          }
+        )
+      },
+      detail: { EmptyView() }
     )
     .background(CalendarStyle.background)
     .toolbar { CalendarToolbar(vm: vm) }
@@ -42,25 +55,5 @@ struct ContentView: View {
     .enableInjection()
   }
 
-  private func navigateDate(increment: Int) {
-    let actualIncrement: Int
-    switch vm.selectedViewMode {
-    case .day:
-      actualIncrement = increment
-    case .week:
-      actualIncrement = increment * 7
-    case .month:
-      actualIncrement = increment
-    }
-
-    if vm.selectedViewMode == .month {
-      vm.selectedDate =
-        Calendar.current.date(byAdding: .month, value: actualIncrement, to: vm.selectedDate)
-        ?? vm.selectedDate
-    } else {
-      vm.selectedDate =
-        Calendar.current.date(byAdding: .day, value: actualIncrement, to: vm.selectedDate)
-        ?? vm.selectedDate
-    }
-  }
+  // navigateDate removed; navigation logic centralized in `CalendarToolbar`
 }

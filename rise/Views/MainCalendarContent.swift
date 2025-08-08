@@ -4,6 +4,7 @@ struct MainCalendarContent: View {
   @ObservedObject var vm: AppViewModel
   @Binding var selectedEvent: CalendarEvent?
   @Binding var isDetailSidebarVisible: Bool
+  @Binding var popoverAnchorPoint: CGPoint?
 
   var body: some View {
     Group {
@@ -15,6 +16,7 @@ struct MainCalendarContent: View {
           events: vm.events,
           onSelectEvent: { event, point in
             selectedEvent = event
+            popoverAnchorPoint = point
             isDetailSidebarVisible = true
           }
         )
@@ -28,6 +30,7 @@ struct MainCalendarContent: View {
             events: vm.events,
             onSelectEvent: { event, point in
               selectedEvent = event
+              popoverAnchorPoint = point
               isDetailSidebarVisible = true
             }
           )
@@ -37,6 +40,7 @@ struct MainCalendarContent: View {
             events: vm.events,
             onSelectEvent: { event, point in
               selectedEvent = event
+              popoverAnchorPoint = point
               isDetailSidebarVisible = true
             }
           )
@@ -47,6 +51,7 @@ struct MainCalendarContent: View {
           events: vm.events,
           onSelectEvent: { event, point in
             selectedEvent = event
+            popoverAnchorPoint = point
             isDetailSidebarVisible = true
           },
           onNavigateMonth: { increment in
@@ -72,17 +77,6 @@ struct CalendarToolbar: ToolbarContent {
     }
 
     ToolbarItem(placement: .principal) {
-      switch vm.selectedViewMode {
-      case .day:
-        Text(dayString(for: vm.selectedDate)).font(.system(size: 14, weight: .semibold))
-      case .week:
-        Text(weekRangeString(for: vm.selectedDate)).font(.system(size: 14, weight: .semibold))
-      case .month:
-        Text(monthYearString(for: vm.selectedDate)).font(.system(size: 14, weight: .semibold))
-      }
-    }
-
-    ToolbarItem(placement: .automatic) {
       Picker("View", selection: $vm.selectedViewMode) {
         ForEach(AppViewModel.ViewMode.allCases, id: \.self) { mode in
           Text(mode.rawValue).tag(mode)
@@ -90,6 +84,20 @@ struct CalendarToolbar: ToolbarContent {
       }
       .pickerStyle(.segmented)
       .fixedSize()
+    }
+
+    ToolbarItem(placement: .automatic) {
+      Group {
+        switch vm.selectedViewMode {
+        case .day:
+          Text(dayString(for: vm.selectedDate))
+        case .week:
+          Text(weekRangeString(for: vm.selectedDate))
+        case .month:
+          Text(monthYearString(for: vm.selectedDate))
+        }
+      }
+      .font(CalendarStyle.fontTitleLarge.weight(.bold))
     }
 
     ToolbarItem(placement: .automatic) {
@@ -159,29 +167,4 @@ struct CalendarToolbar: ToolbarContent {
   }
 }
 
-// MARK: - Extensions
-
-extension CalendarEvent {
-  var isAllDay: Bool {
-    let calendar = Calendar.current
-    return calendar.isDate(startDate, inSameDayAs: endDate)
-      && calendar.component(.hour, from: startDate) == 0
-      && calendar.component(.minute, from: startDate) == 0
-  }
-
-  var duration: TimeInterval {
-    return endDate.timeIntervalSince(startDate)
-  }
-
-  var formattedTime: String {
-    let formatter = DateFormatter()
-    formatter.timeStyle = .short
-    return "\(formatter.string(from: startDate)) - \(formatter.string(from: endDate))"
-  }
-
-  var formattedDate: String {
-    let formatter = DateFormatter()
-    formatter.dateStyle = .medium
-    return formatter.string(from: startDate)
-  }
-}
+// Intentionally left without additional extensions to reduce redundancy

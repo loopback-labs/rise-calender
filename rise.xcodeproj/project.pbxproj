@@ -594,7 +594,7 @@
 				7535D02D2E4530AC00CF3BBC /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 		7535D02E2E4530AC00CF3BBC /* Build configuration list for PBXNativeTarget "rise" */ = {
 			isa = XCConfigurationList;
@@ -603,7 +603,7 @@
 				7535D0302E4530AC00CF3BBC /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 		7535D0312E4530AC00CF3BBC /* Build configuration list for PBXNativeTarget "riseTests" */ = {
 			isa = XCConfigurationList;
@@ -612,7 +612,7 @@
 				7535D0332E4530AC00CF3BBC /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 		7535D0342E4530AC00CF3BBC /* Build configuration list for PBXNativeTarget "riseUITests" */ = {
 			isa = XCConfigurationList;
@@ -621,7 +621,7 @@
 				7535D0362E4530AC00CF3BBC /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
 

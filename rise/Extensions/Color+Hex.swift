@@ -30,35 +30,10 @@ extension Color {
   }
 }
 
-// MARK: - Responsive Layout Modifiers
-extension View {
-  func responsiveLayout() -> some View {
-    self
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
-      .background(CalendarStyle.background)
-  }
-}
-
-// MARK: - Accessibility Extensions
-extension View {
-  func calendarAccessibilityLabel(_ label: String) -> some View {
-    self.accessibilityLabel(label)
-  }
-  
-  func calendarAccessibilityHint(_ hint: String) -> some View {
-    self.accessibilityHint(hint)
-  }
-  
-  func calendarAccessibilityValue(_ value: String) -> some View {
-    self.accessibilityValue(value)
-  }
-}
-
 // MARK: - Mac Calendar Design System
 enum CalendarStyle {
-  // MARK: - Layout Dimensions
-  static let sidebarWidth: CGFloat = 200  // Mac Calendar sidebar width
-  static let detailSidebarWidth: CGFloat = 280  // Mac Calendar detail sidebar width
+  static let sidebarWidth: CGFloat = 200
+  static let detailSidebarWidth: CGFloat = 280
   static let preferencesMinWidth: CGFloat = 600
   static let preferencesMinHeight: CGFloat = 400
   static let preferencesSidebarWidth: CGFloat = 220
@@ -119,26 +94,6 @@ extension Date {
   var isToday: Bool { Calendar.current.isDateInToday(self) }
 }
 
-struct TodayBadge: View {
-  let date: Date
-  var body: some View {
-    Group {
-      if date.isToday {
-        Text(date, format: .dateTime.day())
-          .font(CalendarStyle.fontCaption.weight(.bold))
-          .padding(.horizontal, CalendarStyle.spacingMedium)
-          .padding(.vertical, CalendarStyle.spacingSmall)
-          .background(Circle().fill(Color.accentColor))
-          .foregroundColor(.white)
-      } else {
-        Text(date, format: .dateTime.day())
-          .font(CalendarStyle.fontCaption.weight(.medium))
-          .foregroundColor(.secondary)
-      }
-    }
-  }
-}
-
 struct NowIndicator: View {
   let startOfDay: Date
   var body: some View {
@@ -156,10 +111,17 @@ struct NowIndicator: View {
           .offset(x: -4, y: y - 4), alignment: .topLeading
         )
     }
+    .enableInjection()
   }
+
+  #if DEBUG
+    @ObserveInjection var forceRedraw
+  #endif
 
   private func minutesSinceMidnight(_ date: Date) -> Int {
     let comps = Calendar.current.dateComponents([.hour, .minute], from: date)
     return (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
   }
 }
+
+//

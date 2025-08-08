@@ -91,7 +91,12 @@ struct AccountsPreferencesView: View {
       Spacer()
     }
     .padding(CalendarStyle.preferencesSpacingLarge)
+    .enableInjection()
   }
+
+  #if DEBUG
+    @ObserveInjection var forceRedraw
+  #endif
 }
 
 struct AccountPreferencesRow: View {
@@ -183,19 +188,29 @@ struct AccountPreferencesRow: View {
             .stroke(CalendarStyle.eventBorder, lineWidth: 1)
         )
     )
+    .enableInjection()
   }
+
+  #if DEBUG
+    @ObserveInjection var forceRedraw
+  #endif
 }
 
 struct CalendarPreferencesRow: View {
   let calendar: GoogleCalendar
   let accountEmail: String
   @ObservedObject var vm: AppViewModel
+  @State private var hexInput: String = ""
+  private let presetColors: [String] = [
+    "#4285F4", "#DB4437", "#F4B400", "#0F9D58", "#AB47BC",
+    "#00ACC1", "#5E6AD2", "#FF7043", "#26A69A", "#8D6E63",
+  ]
 
   var body: some View {
     HStack(spacing: CalendarStyle.spacingMedium) {
       // Color indicator
       Circle()
-        .fill(Color(hex: calendar.displayColor))
+        .fill(Color(hex: hexInput.isEmpty ? calendar.displayColor : hexInput))
         .frame(width: CalendarStyle.iconSizeMedium, height: CalendarStyle.iconSizeMedium)
         .overlay(
           Circle()
@@ -208,6 +223,55 @@ struct CalendarPreferencesRow: View {
         .lineLimit(1)
 
       Spacer()
+
+      // Preset color options
+      HStack(spacing: 6) {
+        ForEach(presetColors, id: \.self) { swatch in
+          let isSelected =
+            (hexInput.isEmpty ? calendar.displayColor.uppercased() : hexInput.uppercased())
+            == swatch.uppercased()
+          Button {
+            hexInput = swatch
+            applyColorChange()
+          } label: {
+            ZStack {
+              Circle()
+                .fill(Color(hex: swatch))
+              if isSelected {
+                Image(systemName: "checkmark")
+                  .font(.system(size: 8, weight: .bold))
+                  .foregroundColor(.white)
+              }
+            }
+            .frame(width: 16, height: 16)
+            .overlay(
+              Circle()
+                .stroke(
+                  isSelected ? Color.primary.opacity(0.5) : Color.primary.opacity(0.2), lineWidth: 1
+                )
+            )
+          }
+          .buttonStyle(.plain)
+          .help(swatch)
+        }
+      }
+
+      // Hex color editor
+      TextField("#RRGGBB", text: $hexInput)
+        .onSubmit { applyColorChange() }
+        .textFieldStyle(.roundedBorder)
+        .font(CalendarStyle.fontCaption)
+        .frame(width: 100)
+        .disableAutocorrection(true)
+        .help("Enter a hex color (e.g. #1A73E8)")
+
+      Button {
+        applyColorChange()
+      } label: {
+        Image(systemName: "checkmark.circle")
+      }
+      .buttonStyle(.borderless)
+      .help("Save color")
 
       // Visibility toggle
       Toggle(
@@ -232,7 +296,36 @@ struct CalendarPreferencesRow: View {
         .fill(Color.clear)
     )
     .contentShape(Rectangle())
+    .onAppear {
+      if hexInput.isEmpty { hexInput = calendar.displayColor }
+    }
+    .onChange(of: calendar.displayColor) { newColor in
+      hexInput = newColor
+    }
+    .enableInjection()
   }
+
+  private func applyColorChange() {
+    let normalized = normalizeHexString(hexInput)
+    hexInput = normalized
+    vm.updateCalendarColor(email: accountEmail, calendarId: calendar.id, color: normalized)
+  }
+
+  private func normalizeHexString(_ input: String) -> String {
+    let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+    let noHash = trimmed.hasPrefix("#") ? String(trimmed.dropFirst()) : trimmed
+    let upper = noHash.uppercased()
+    switch upper.count {
+    case 3, 6, 8:
+      return "#" + upper
+    default:
+      return calendar.displayColor
+    }
+  }
+
+  #if DEBUG
+    @ObserveInjection var forceRedraw
+  #endif
 }
 
 struct GeneralPreferencesView: View {
@@ -294,11 +387,18 @@ struct GeneralPreferencesView: View {
       Spacer()
     }
     .padding(CalendarStyle.preferencesSpacingLarge)
+    .enableInjection()
   }
+
+  #if DEBUG
+    @ObserveInjection var forceRedraw
+  #endif
 }
 
 struct AdvancedPreferencesView: View {
   @ObservedObject var vm: AppViewModel
+  @State private var showResetConfirm = false
+  @State private var showClearCacheConfirm = false
 
   var body: some View {
     VStack(alignment: .leading, spacing: CalendarStyle.preferencesSpacingLarge) {
@@ -344,11 +444,54 @@ struct AdvancedPreferencesView: View {
           .font(CalendarStyle.fontCaption)
           .foregroundColor(.secondary)
           .fixedSize(horizontal: false, vertical: true)
+
+          HStack(spacing: CalendarStyle.preferencesSpacingMedium) {
+            Button {
+              vm.syncNow()
+            } label: {
+              Label("Sync Now", systemImage: "arrow.clockwise")
+            }
+            .buttonStyle(.bordered)
+
+            Button(role: .destructive) {
+              showClearCacheConfirm = true
+            } label: {
+              Label("Clear Local Cache", systemImage: "trash")
+            }
+            .buttonStyle(.bordered)
+            .alert("Clear local cache?", isPresented: $showClearCacheConfirm) {
+              Button("Cancel", role: .cancel) {}
+              Button("Clear", role: .destructive) { vm.clearLocalCache() }
+            } message: {
+              Text("This removes cached calendars and events. Accounts and tokens remain.")
+            }
+
+            Spacer()
+
+            Button(role: .destructive) {
+              showResetConfirm = true
+            } label: {
+              Label("Reset App", systemImage: "exclamationmark.triangle")
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.red)
+            .alert("Reset app?", isPresented: $showResetConfirm) {
+              Button("Cancel", role: .cancel) {}
+              Button("Reset", role: .destructive) { vm.resetApp() }
+            } message: {
+              Text("This signs you out of all accounts, clears tokens, settings and local data.")
+            }
+          }
         }
       }
 
       Spacer()
     }
     .padding(CalendarStyle.preferencesSpacingLarge)
+    .enableInjection()
   }
+
+  #if DEBUG
+    @ObserveInjection var forceRedraw
+  #endif
 }

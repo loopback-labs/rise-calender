@@ -79,7 +79,12 @@ private struct MonthWeekdaysHeaderRow: View {
           .frame(height: CalendarStyle.dayHeaderHeight)
       }
     }
+      .enableInjection()
   }
+
+  #if DEBUG
+  @ObserveInjection var forceRedraw
+  #endif
 }
 
 private struct DayCell: View {
@@ -165,7 +170,12 @@ private struct DayCell: View {
       .frame(width: 300)
       .frame(maxHeight: 400)
     }
+      .enableInjection()
   }
+
+  #if DEBUG
+  @ObserveInjection var forceRedraw
+  #endif
 }
 
 private struct OverflowEventsView: View {
@@ -205,7 +215,12 @@ private struct OverflowEventsView: View {
       }
     }
     .background(CalendarStyle.background)
+      .enableInjection()
   }
+
+  #if DEBUG
+  @ObserveInjection var forceRedraw
+  #endif
 }
 
 private struct OverflowEventRow: View {
@@ -253,7 +268,12 @@ private struct OverflowEventRow: View {
     }
     .buttonStyle(.plain)
     .onHover { isHovering = $0 }
+      .enableInjection()
   }
+
+  #if DEBUG
+  @ObserveInjection var forceRedraw
+  #endif
 }
 
 private struct EventButton: View {

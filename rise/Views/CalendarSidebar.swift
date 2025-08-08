@@ -1,5 +1,37 @@
 import SwiftUI
 
+// MARK: - Shared UI Components
+// Colored checkbox toggle style used in the sidebar calendar list
+struct ColoredCheckboxStyle: ToggleStyle {
+  let color: Color
+
+  func makeBody(configuration: Configuration) -> some View {
+    Button(action: { configuration.isOn.toggle() }) {
+      HStack(spacing: 8) {
+        ZStack {
+          RoundedRectangle(cornerRadius: 4)
+            .stroke(color, lineWidth: 2)
+            .background(
+              RoundedRectangle(cornerRadius: 4)
+                .fill(configuration.isOn ? color.opacity(0.2) : Color.clear)
+            )
+            .frame(width: 16, height: 16)
+
+          if configuration.isOn {
+            Image(systemName: "checkmark")
+              .font(.system(size: 10, weight: .bold))
+              .foregroundColor(color)
+          }
+        }
+
+        configuration.label
+      }
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+  }
+}
+
 // Shared layout constants to keep sidebar items perfectly aligned across views
 private enum SidebarLayout {
   static let sideInset: CGFloat = 16
@@ -28,7 +60,7 @@ struct CalendarSidebar: View {
       }
       .padding(.horizontal, SidebarLayout.sideInset)
       .padding(.vertical, 12)
-      .background(Color(NSColor.controlBackgroundColor))
+      .background(CalendarStyle.panelBackground)
 
       Divider()
 
@@ -43,11 +75,16 @@ struct CalendarSidebar: View {
       }
     }
     .frame(width: 250)
-    .background(Color(NSColor.controlBackgroundColor))
+    .background(CalendarStyle.panelBackground)
     .sheet(isPresented: $isAddingAccount) {
       AddAccountView(vm: vm)
     }
+    .enableInjection()
   }
+
+  #if DEBUG
+    @ObserveInjection var forceRedraw
+  #endif
 }
 
 struct AccountSection: View {
@@ -163,7 +200,12 @@ struct CalendarRow: View {
     }
     .frame(height: SidebarLayout.rowHeight)
     .padding(.vertical, 4)
+    .enableInjection()
   }
+
+  #if DEBUG
+    @ObserveInjection var forceRedraw
+  #endif
 }
 
 struct AddAccountView: View {
@@ -195,35 +237,12 @@ struct AddAccountView: View {
     }
     .padding()
     .frame(width: 300, height: 200)
+    .enableInjection()
   }
+
+  #if DEBUG
+    @ObserveInjection var forceRedraw
+  #endif
 }
 
-// MARK: - Colored Checkbox Style
-private struct ColoredCheckboxStyle: ToggleStyle {
-  let color: Color
-
-  func makeBody(configuration: Configuration) -> some View {
-    HStack(spacing: 8) {
-      Button(action: { configuration.isOn.toggle() }) {
-        ZStack {
-          RoundedRectangle(cornerRadius: 4)
-            .stroke(color, lineWidth: 2)
-            .background(
-              RoundedRectangle(cornerRadius: 4)
-                .fill(configuration.isOn ? color.opacity(0.2) : Color.clear)
-            )
-            .frame(width: 16, height: 16)
-
-          if configuration.isOn {
-            Image(systemName: "checkmark")
-              .font(.system(size: 10, weight: .bold))
-              .foregroundColor(color)
-          }
-        }
-      }
-      .buttonStyle(.plain)
-
-      configuration.label
-    }
-  }
-}
+// (moved to top for clarity and to satisfy linter symbol resolution)

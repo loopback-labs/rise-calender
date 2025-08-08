@@ -146,7 +146,12 @@ struct AllDayEventsDayRow: View {
       }
       .frame(maxWidth: .infinity, alignment: .leading)
     }
+      .enableInjection()
   }
+
+  #if DEBUG
+  @ObserveInjection var forceRedraw
+  #endif
 }
 
 // Note: AllDayEventBubble, HourGutter, DayHeader, DayColumn, and EventBubble

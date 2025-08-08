@@ -91,7 +91,12 @@ struct AllDayEventsRow: View {
           .frame(minWidth: CalendarStyle.dayColumnMinWidth, maxWidth: .infinity)
       }
     }
+      .enableInjection()
   }
+
+  #if DEBUG
+  @ObserveInjection var forceRedraw
+  #endif
 
   private func allDayEventsFor(_ day: Date) -> [CalendarEvent] {
     let cal = Calendar.current
@@ -128,7 +133,12 @@ struct AllDayColumn: View {
       }
       Spacer(minLength: 0)
     }
+      .enableInjection()
   }
+
+  #if DEBUG
+  @ObserveInjection var forceRedraw
+  #endif
 }
 
 struct GridAllDayEventBubble: View {
@@ -163,7 +173,12 @@ struct GridAllDayEventBubble: View {
     }
     .buttonStyle(.plain)
     .onHover { isHovering = $0 }
+      .enableInjection()
   }
+
+  #if DEBUG
+  @ObserveInjection var forceRedraw
+  #endif
 }
 
 struct GridHourGutter: View {
@@ -217,7 +232,12 @@ struct GridWeekHeaderRow: View {
           .frame(minWidth: CalendarStyle.dayColumnMinWidth, maxWidth: .infinity)
       }
     }
+      .enableInjection()
   }
+
+  #if DEBUG
+  @ObserveInjection var forceRedraw
+  #endif
 }
 
 struct GridDayHeader: View {
@@ -240,7 +260,12 @@ struct GridDayHeader: View {
     }
     .frame(height: CalendarStyle.dayHeaderHeight)
     .background(date.isToday ? CalendarStyle.todayBackground : .clear)
+      .enableInjection()
   }
+
+  #if DEBUG
+  @ObserveInjection var forceRedraw
+  #endif
 }
 
 struct GridDayColumn: View {
@@ -279,7 +304,12 @@ struct GridDayColumn: View {
         }
       }
     }
+      .enableInjection()
   }
+
+  #if DEBUG
+  @ObserveInjection var forceRedraw
+  #endif
 
   // MARK: - Layout
   private struct PositionedEvent {
@@ -416,5 +446,10 @@ private struct GridEventBubble: View {
     .frame(height: eventPosition.height - 1)  // avoid touching grid line
     .offset(y: eventPosition.top + 0.5)  // center within the hour row
     .onHover { isHovering = $0 }
+      .enableInjection()
   }
+
+  #if DEBUG
+  @ObserveInjection var forceRedraw
+  #endif
 }

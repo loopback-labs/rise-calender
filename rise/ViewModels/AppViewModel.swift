@@ -38,8 +38,45 @@ final class AppViewModel: ObservableObject {
     Task { await refreshAllAccounts() }
   }
 
-  // MARK: - Window Size Management
-  // Removed dynamic content-driven window resizing to let the app use the native window size
+  // MARK: - Advanced Actions
+  func syncNow() {
+    Task {
+      isBusy = true
+      defer { isBusy = false }
+      await refreshAllAccounts()
+    }
+  }
+
+  func clearLocalCache() {
+    // Clear in-memory caches
+    calendarsByAccount.removeAll()
+    events.removeAll()
+
+    // Clear per-account calendar settings
+    for account in accounts {
+      UserDefaults.standard.removeObject(forKey: calendarSettingsKey + account.email)
+    }
+  }
+
+  func resetApp() {
+    isBusy = true
+    defer { isBusy = false }
+
+    // Remove tokens from Keychain and per-account calendar settings
+    for account in accounts {
+      try? KeychainStorage.shared.remove(forKey: tokensKeyPrefix + account.email)
+      UserDefaults.standard.removeObject(forKey: calendarSettingsKey + account.email)
+    }
+
+    // Clear persisted app state
+    UserDefaults.standard.removeObject(forKey: accountsPersistenceKey)
+    UserDefaults.standard.removeObject(forKey: viewStateKey)
+
+    // Clear in-memory state
+    accounts.removeAll()
+    calendarsByAccount.removeAll()
+    events.removeAll()
+  }
 
   func addGoogleAccount(presentationAnchor: ASPresentationAnchor) {
     Task {

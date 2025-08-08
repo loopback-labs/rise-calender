@@ -148,5 +148,10 @@ private struct WeekEventRow: View {
     }
     .buttonStyle(.plain)
     .onHover { isHovering = $0 }
+      .enableInjection()
   }
+
+  #if DEBUG
+  @ObserveInjection var forceRedraw
+  #endif
 }
