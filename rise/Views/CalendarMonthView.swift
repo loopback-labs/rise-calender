@@ -23,7 +23,7 @@ struct CalendarMonthView: View {
     let totalCells = leadingBlanks + md.days
 
     VStack(spacing: 0) {
-      // Calendar grid - no scrolling, full screen
+      // Calendar grid - fixed layout that fills the window
       LazyVGrid(
         columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7),
         spacing: 0
@@ -38,15 +38,10 @@ struct CalendarMonthView: View {
             .background(CalendarStyle.panelBackground)
         }
 
-        // Calendar days
+        // Calendar days - fixed height grid
         ForEach(0..<totalCells, id: \.self) { cellIndex in
           if cellIndex < leadingBlanks {
             // Empty cell for leading blanks
-            Rectangle()
-              .fill(Color.clear)
-              .frame(maxHeight: .infinity)
-          } else if cellIndex >= totalCells {
-            // Empty cell for trailing blanks
             Rectangle()
               .fill(Color.clear)
               .frame(maxHeight: .infinity)
@@ -79,6 +74,11 @@ private struct DayCell: View {
   let date: Date
   let events: [CalendarEvent]
   let onSelect: (CalendarEvent, CGPoint) -> Void
+  @State private var showOverflowPopover = false
+  @State private var overflowPopoverPosition: CGPoint = .zero
+
+  // Maximum number of events to show before overflow
+  private let maxVisibleEvents = 4
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
@@ -100,18 +100,32 @@ private struct DayCell: View {
       .padding(.horizontal, 8)
       .padding(.top, 4)
 
-      // Events section
-      VStack(alignment: .leading, spacing: 2) {
-        ForEach(events.prefix(6)) { event in  // Show more events
+      // Events section with fixed height
+      VStack(alignment: .leading, spacing: 1) {
+        ForEach(Array(events.prefix(maxVisibleEvents).enumerated()), id: \.element.id) {
+          index, event in
           EventButton(event: event, onSelect: onSelect)
+            .frame(height: 20)  // Fixed height for consistent layout
         }
 
-        if events.count > 6 {
-          Text("+\(events.count - 6) more")
-            .font(.caption2.weight(.medium))
-            .foregroundColor(.secondary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 2)
+        // Overflow indicator
+        if events.count > maxVisibleEvents {
+          Button(action: {
+            showOverflowPopover = true
+            // Get position for popover
+            let mouseLocation = NSEvent.mouseLocation
+            if let window = NSApplication.shared.windows.first {
+              overflowPopoverPosition = window.convertPoint(fromScreen: mouseLocation)
+            }
+          }) {
+            Text("+\(events.count - maxVisibleEvents) more")
+              .font(.caption2.weight(.medium))
+              .foregroundColor(.secondary)
+              .padding(.horizontal, 8)
+              .padding(.vertical, 2)
+          }
+          .buttonStyle(.plain)
+          .frame(height: 20)  // Fixed height for consistent layout
         }
 
         Spacer(minLength: 0)
@@ -128,6 +142,106 @@ private struct DayCell: View {
       Rectangle()
         .stroke(CalendarStyle.gridLine, lineWidth: 0.5)
     )
+    .popover(isPresented: $showOverflowPopover) {
+      OverflowEventsView(
+        date: date,
+        events: Array(events.dropFirst(maxVisibleEvents)),
+        onSelectEvent: onSelect
+      )
+      .frame(width: 300, height: 400)
+    }
+  }
+}
+
+private struct OverflowEventsView: View {
+  let date: Date
+  let events: [CalendarEvent]
+  let onSelectEvent: (CalendarEvent, CGPoint) -> Void
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      // Header
+      HStack {
+        Text(date, format: .dateTime.month().day())
+          .font(.headline.weight(.semibold))
+        Spacer()
+      }
+      .padding(.horizontal, 16)
+      .padding(.vertical, 12)
+      .background(CalendarStyle.panelBackground)
+
+      Divider()
+
+      // Events list
+      ScrollView {
+        LazyVStack(alignment: .leading, spacing: 8) {
+          ForEach(events) { event in
+            OverflowEventRow(event: event) {
+              let mouseLocation = NSEvent.mouseLocation
+              if let window = NSApplication.shared.windows.first {
+                let windowPoint = window.convertPoint(fromScreen: mouseLocation)
+                onSelectEvent(event, windowPoint)
+              }
+            }
+          }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+      }
+    }
+    .background(CalendarStyle.background)
+  }
+}
+
+private struct OverflowEventRow: View {
+  let event: CalendarEvent
+  let onSelect: () -> Void
+  @State private var isHovering = false
+
+  var body: some View {
+    Button(action: onSelect) {
+      HStack(spacing: 8) {
+        // Time
+        Text(event.startDate, format: .dateTime.hour().minute())
+          .font(.caption2.weight(.medium))
+          .foregroundColor(.secondary)
+          .frame(width: 50, alignment: .leading)
+
+        // Color indicator
+        Circle()
+          .fill(Color(hex: event.colorHex ?? "#5E6AD2"))
+          .frame(width: 8, height: 8)
+
+        // Event title
+        VStack(alignment: .leading, spacing: 2) {
+          Text(event.title)
+            .font(.subheadline.weight(.medium))
+            .foregroundColor(.primary)
+            .lineLimit(2)
+
+          if let location = event.location, !location.isEmpty {
+            Text(location)
+              .font(.caption2)
+              .foregroundColor(.secondary)
+              .lineLimit(1)
+          }
+        }
+
+        Spacer()
+      }
+      .padding(.horizontal, 12)
+      .padding(.vertical, 8)
+      .background(
+        RoundedRectangle(cornerRadius: 6)
+          .fill(Color(hex: event.colorHex ?? "#5E6AD2").opacity(isHovering ? 0.1 : 0.05))
+      )
+      .overlay(
+        RoundedRectangle(cornerRadius: 6)
+          .stroke(Color(hex: event.colorHex ?? "#5E6AD2").opacity(0.3), lineWidth: 1)
+      )
+    }
+    .buttonStyle(.plain)
+    .onHover { isHovering = $0 }
   }
 }
 

@@ -9,39 +9,37 @@ struct CalendarDayView: View {
   private let hours: [Int] = Array(0...23)
 
   var body: some View {
-    ScrollView([.vertical, .horizontal], showsIndicators: false) {
+    GeometryReader { geometry in
       VStack(spacing: 0) {
         // All-day events section
         AllDayEventsDayRow(date: date, events: events, onSelectEvent: onSelectEvent)
-          .frame(height: 72) // Increased height for better visibility
-          .padding(.horizontal, 16) // Increased padding
-          .padding(.vertical, 12) // Increased padding
+          .frame(height: 72)
+          .padding(.horizontal, 16)
+          .padding(.vertical, 12)
 
         Divider()
-          .padding(.horizontal, 16) // Added horizontal padding
+          .padding(.horizontal, 16)
 
-        // Time grid section
-        HStack(alignment: .top, spacing: 20) { // Increased spacing
+        // Time grid section - fills remaining space
+        HStack(alignment: .top, spacing: 20) {
           HourGutter(hours: hours)
 
           // Single day column
-          VStack(spacing: 8) { // Increased spacing
+          VStack(spacing: 8) {
             DayHeader(date: date)
             DayColumn(day: date, events: eventsFor(date), onSelectEvent: onSelectEvent)
               .overlay(alignment: .topLeading) {
                 if date.isToday { NowIndicator(startOfDay: date) }
               }
           }
-          .frame(minWidth: CalendarStyle.dayColumnMinWidth)
+          .frame(maxWidth: .infinity)
         }
-        .padding(16) // Increased padding
-        .frame(
-          minWidth: CalendarStyle.dayColumnMinWidth + 60 + 16 * 2, // Updated width calculation
-          minHeight: 24 * CalendarStyle.hourRowHeight)
+        .padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     .background(CalendarStyle.background)
-    .scrollIndicators(.hidden)
     .enableInjection()
   }
 

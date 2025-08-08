@@ -9,44 +9,40 @@ struct CalendarTimeGridWeekView: View {
   private let hours: [Int] = Array(0...23)
 
   var body: some View {
-    let minWidth = 7 * CalendarStyle.dayColumnMinWidth + 60 + 20 * 8 + 32  // Improved spacing
-    let minHeight = 24 * CalendarStyle.hourRowHeight
-
-    ScrollView([.vertical, .horizontal], showsIndicators: false) {
+    GeometryReader { geometry in
       VStack(spacing: 0) {
         // All-day events section
         AllDayEventsRow(startOfWeek: startOfWeek, events: events, onSelectEvent: onSelectEvent)
-          .frame(height: 72)  // Increased height for better visibility
+          .frame(height: 72)
           .padding(.horizontal, 16)
           .padding(.vertical, 12)
 
         Divider()
           .padding(.horizontal, 16)
 
-        // Time grid section
-        HStack(alignment: .top, spacing: 20) {  // Increased spacing
+        // Time grid section - fills remaining space
+        HStack(alignment: .top, spacing: 20) {
           HourGutter(hours: hours)
           // 7 day columns
           ForEach(0..<7, id: \.self) { col in
             let day = Calendar.current.date(byAdding: .day, value: col, to: startOfWeek)!
-            VStack(spacing: 8) {  // Increased spacing
+            VStack(spacing: 8) {
               DayHeader(date: day)
               DayColumn(day: day, events: eventsFor(day), onSelectEvent: onSelectEvent)
                 .overlay(alignment: .topLeading) {
                   if day.isToday { NowIndicator(startOfDay: day) }
                 }
             }
-            .frame(minWidth: CalendarStyle.dayColumnMinWidth, maxWidth: .infinity)
+            .frame(maxWidth: .infinity)
             .layoutPriority(1)
           }
         }
-        .padding(16)  // Increased padding
-        .frame(minWidth: minWidth, minHeight: minHeight)
+        .padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
-      .frame(minWidth: minWidth)
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     .background(CalendarStyle.background)
-    .scrollIndicators(.hidden)
     .enableInjection()
   }
 
@@ -237,7 +233,7 @@ struct DayColumn: View {
           .offset(y: top)
       }
     }
-    .frame(maxWidth: .infinity, minHeight: 24 * CalendarStyle.hourRowHeight)
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
 
   private func minutesSinceMidnight(_ date: Date) -> Int {
