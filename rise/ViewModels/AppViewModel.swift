@@ -7,7 +7,7 @@ final class AppViewModel: ObservableObject {
   @Published var accounts: [GoogleAccount] = []
   @Published var calendarsByAccount: [String: [GoogleCalendar]] = [:]  // email -> calendars
   @Published var events: [CalendarEvent] = []
-  @Published var selectedViewMode: ViewMode = .month {
+  @Published var selectedViewMode: ViewMode = .week {
     didSet {
       saveViewState()
       DispatchQueue.main.async { [weak self] in
@@ -28,6 +28,7 @@ final class AppViewModel: ObservableObject {
   @Published var errorMessage: String?
 
   enum ViewMode: String, CaseIterable {
+    case day = "Day"
     case week = "Week"
     case month = "Month"
   }
@@ -62,6 +63,9 @@ final class AppViewModel: ObservableObject {
     let minHeight: CGFloat
 
     switch selectedViewMode {
+    case .day:
+      minWidth = 600
+      minHeight = 700
     case .month:
       minWidth = 900
       minHeight = 700
@@ -71,7 +75,7 @@ final class AppViewModel: ObservableObject {
         minWidth = 700
         minHeight = 600
       case .grid:
-        minWidth = 1400
+        minWidth = 1200
         minHeight = 900
       }
     }

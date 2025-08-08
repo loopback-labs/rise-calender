@@ -9,22 +9,35 @@ import SwiftUI
 
 @main
 struct riseApp: App {
+  @StateObject private var preferencesManager = PreferencesManager()
+  
   var body: some Scene {
     WindowGroup {
       ContentView()
+        .environmentObject(preferencesManager)
     }
     .windowResizability(.contentSize)
     .defaultSize(width: 1200, height: 800)
     .windowStyle(.hiddenTitleBar)
     .commands {
-      // Add custom menu commands for better UX
-      CommandGroup(replacing: .newItem) {
-        Button("New Window") {
-          NSApplication.shared.sendAction(
-            #selector(NSApplication.newWindowForTab(_:)), to: nil, from: nil)
+      // Add Preferences command with standard Mac shortcut
+      CommandGroup(after: .appInfo) {
+        Button("Preferences...") {
+          preferencesManager.showPreferences = true
         }
-        .keyboardShortcut("n", modifiers: [.command])
+        .keyboardShortcut(",", modifiers: [.command])
       }
     }
+    
+    // Add Preferences window
+    Settings {
+      PreferencesView()
+        .environmentObject(preferencesManager)
+    }
   }
+}
+
+// Preferences manager to handle showing/hiding preferences
+class PreferencesManager: ObservableObject {
+  @Published var showPreferences = false
 }

@@ -9,40 +9,44 @@ struct CalendarTimeGridWeekView: View {
   private let hours: [Int] = Array(0...23)
 
   var body: some View {
-    let minWidth = 7 * CalendarStyle.dayColumnMinWidth + 54 + 12 * 8
+    let minWidth = 7 * CalendarStyle.dayColumnMinWidth + 60 + 20 * 8 + 32  // Improved spacing
     let minHeight = 24 * CalendarStyle.hourRowHeight
 
-    ScrollView([.vertical, .horizontal]) {
+    ScrollView([.vertical, .horizontal], showsIndicators: false) {
       VStack(spacing: 0) {
         // All-day events section
         AllDayEventsRow(startOfWeek: startOfWeek, events: events, onSelectEvent: onSelectEvent)
-          .frame(height: 60)
-          .padding(.horizontal, 12)
-          .padding(.vertical, 8)
+          .frame(height: 72)  // Increased height for better visibility
+          .padding(.horizontal, 16)
+          .padding(.vertical, 12)
 
         Divider()
+          .padding(.horizontal, 16)
 
         // Time grid section
-        HStack(alignment: .top, spacing: 16) {
+        HStack(alignment: .top, spacing: 20) {  // Increased spacing
           HourGutter(hours: hours)
           // 7 day columns
           ForEach(0..<7, id: \.self) { col in
             let day = Calendar.current.date(byAdding: .day, value: col, to: startOfWeek)!
-            VStack(spacing: 6) {
+            VStack(spacing: 8) {  // Increased spacing
               DayHeader(date: day)
               DayColumn(day: day, events: eventsFor(day), onSelectEvent: onSelectEvent)
                 .overlay(alignment: .topLeading) {
                   if day.isToday { NowIndicator(startOfDay: day) }
                 }
             }
-            .frame(minWidth: CalendarStyle.dayColumnMinWidth)
+            .frame(minWidth: CalendarStyle.dayColumnMinWidth, maxWidth: .infinity)
+            .layoutPriority(1)
           }
         }
-        .padding(12)
+        .padding(16)  // Increased padding
         .frame(minWidth: minWidth, minHeight: minHeight)
       }
+      .frame(minWidth: minWidth)
     }
     .background(CalendarStyle.background)
+    .scrollIndicators(.hidden)
     .enableInjection()
   }
 
@@ -69,19 +73,19 @@ struct AllDayEventsRow: View {
   let onSelectEvent: (CalendarEvent, CGPoint) -> Void
 
   var body: some View {
-    HStack(alignment: .top, spacing: 16) {
+    HStack(alignment: .top, spacing: 20) {  // Increased spacing
       // All-day label
       Text("all-day")
         .font(.caption2.weight(.medium))
         .foregroundColor(.secondary)
-        .frame(width: 54, alignment: .trailing)
-        .padding(.top, 4)
+        .frame(width: 60, alignment: .trailing)  // Increased width
+        .padding(.top, 6)
 
       // Day columns for all-day events
       ForEach(0..<7, id: \.self) { col in
         let day = Calendar.current.date(byAdding: .day, value: col, to: startOfWeek)!
         AllDayColumn(day: day, events: allDayEventsFor(day), onSelectEvent: onSelectEvent)
-          .frame(minWidth: CalendarStyle.dayColumnMinWidth)
+          .frame(minWidth: CalendarStyle.dayColumnMinWidth, maxWidth: .infinity)
       }
     }
   }
@@ -109,15 +113,16 @@ struct AllDayColumn: View {
   let onSelectEvent: (CalendarEvent, CGPoint) -> Void
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 2) {
-      ForEach(events.prefix(3)) { event in
+    VStack(alignment: .leading, spacing: 3) {  // Increased spacing
+      ForEach(events.prefix(4)) { event in  // Show more events
         AllDayEventBubble(event: event, onSelect: onSelectEvent)
       }
-      if events.count > 3 {
-        Text("+\(events.count - 3) more")
-          .font(.caption2)
+      if events.count > 4 {
+        Text("+\(events.count - 4) more")
+          .font(.caption2.weight(.medium))
           .foregroundColor(.secondary)
-          .padding(.horizontal, 4)
+          .padding(.horizontal, 6)
+          .padding(.vertical, 2)
       }
       Spacer(minLength: 0)
     }
@@ -146,19 +151,19 @@ struct AllDayEventBubble: View {
           .fill(Color(hex: event.colorHex ?? "#5E6AD2"))
           .frame(width: 8, height: 8)
         Text(event.title)
-          .font(.caption)
+          .font(.caption.weight(.medium))  // Improved typography
           .lineLimit(1)
         Spacer(minLength: 0)
       }
-      .padding(.horizontal, 6)
-      .padding(.vertical, 2)
+      .padding(.horizontal, 8)  // Increased padding
+      .padding(.vertical, 4)  // Increased padding
       .background(
-        RoundedRectangle(cornerRadius: 4)
-          .fill(Color(hex: event.colorHex ?? "#5E6AD2").opacity(isHovering ? 0.2 : 0.15))
+        RoundedRectangle(cornerRadius: CalendarStyle.eventCornerRadius)
+          .fill(Color(hex: event.colorHex ?? "#5E6AD2").opacity(isHovering ? 0.3 : 0.2))  // Better opacity
       )
       .overlay(
-        RoundedRectangle(cornerRadius: 4)
-          .stroke(Color(hex: event.colorHex ?? "#5E6AD2").opacity(0.4), lineWidth: 1)
+        RoundedRectangle(cornerRadius: CalendarStyle.eventCornerRadius)
+          .stroke(Color(hex: event.colorHex ?? "#5E6AD2").opacity(0.7), lineWidth: 0.5)  // Better border
       )
     }
     .buttonStyle(.plain)
@@ -166,7 +171,7 @@ struct AllDayEventBubble: View {
   }
 }
 
-private struct HourGutter: View {
+struct HourGutter: View {
   let hours: [Int]
   var body: some View {
     VStack(alignment: .trailing, spacing: 0) {
@@ -174,7 +179,8 @@ private struct HourGutter: View {
         Text(hourLabel(h))
           .font(.caption2.weight(.medium))
           .foregroundColor(.secondary)
-          .frame(width: 54, height: CalendarStyle.hourRowHeight, alignment: .topTrailing)
+          .frame(width: 60, height: CalendarStyle.hourRowHeight, alignment: .topTrailing)  // Increased width
+          .padding(.trailing, 8)  // Added padding
       }
     }
     .background(CalendarStyle.panelBackground)
@@ -186,22 +192,23 @@ private struct HourGutter: View {
   }
 }
 
-private struct DayHeader: View {
+struct DayHeader: View {
   let date: Date
   var body: some View {
-    HStack(spacing: 6) {
+    VStack(spacing: 4) {  // Increased spacing
       Text(date, format: .dateTime.weekday(.abbreviated))
-        .font(.caption.weight(.medium))
+        .font(.caption2.weight(.semibold))  // Improved typography
         .foregroundColor(date.isToday ? .primary : .secondary)
       TodayBadge(date: date)
     }
     .frame(height: CalendarStyle.dayHeaderHeight)
     .frame(maxWidth: .infinity)
     .background(date.isToday ? CalendarStyle.todayBackground : .clear)
+    .cornerRadius(6)  // Added corner radius
   }
 }
 
-private struct DayColumn: View {
+struct DayColumn: View {
   let day: Date
   let events: [CalendarEvent]
   let onSelectEvent: (CalendarEvent, CGPoint) -> Void
@@ -239,7 +246,7 @@ private struct DayColumn: View {
   }
 }
 
-private struct EventBubble: View {
+struct EventBubble: View {
   let event: CalendarEvent
   let onSelect: (CalendarEvent, CGPoint) -> Void
   @State private var isHovering: Bool = false
@@ -255,7 +262,7 @@ private struct EventBubble: View {
         onSelect(event, CGPoint(x: 100, y: 100))  // Fallback position
       }
     }) {
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: 3) {  // Increased spacing
         // Time range at the top
         Text(timeRangeText)
           .font(.caption2.weight(.semibold))
@@ -264,8 +271,8 @@ private struct EventBubble: View {
 
         // Event title
         Text(event.title)
-          .font(.caption)
-          .lineLimit(1)
+          .font(.caption.weight(.medium))  // Improved typography
+          .lineLimit(2)  // Allow 2 lines for better readability
           .multilineTextAlignment(.leading)
           .foregroundColor(.primary)
 
@@ -280,15 +287,15 @@ private struct EventBubble: View {
         Spacer(minLength: 0)
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-      .padding(.horizontal, 4)
-      .padding(.vertical, 2)
+      .padding(.horizontal, 6)  // Increased padding
+      .padding(.vertical, 4)  // Increased padding
       .background(
         RoundedRectangle(cornerRadius: CalendarStyle.eventCornerRadius)
-          .fill(tint.opacity(isHovering ? 0.22 : 0.16))
+          .fill(tint.opacity(isHovering ? 0.3 : 0.2))  // Better opacity
       )
       .overlay(
         RoundedRectangle(cornerRadius: CalendarStyle.eventCornerRadius)
-          .stroke(tint.opacity(0.55), lineWidth: 1)
+          .stroke(tint.opacity(0.7), lineWidth: 0.5)  // Better border
       )
     }
     .buttonStyle(.plain)

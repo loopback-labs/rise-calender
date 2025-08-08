@@ -5,6 +5,7 @@ struct CalendarMonthView: View {
   let date: Date
   let events: [CalendarEvent]
   let onSelectEvent: (CalendarEvent, CGPoint) -> Void
+  let onNavigateMonth: ((Int) -> Void)?  // Callback for month navigation
 
   private var monthMetadata: (firstDay: Date, days: Int, firstWeekday: Int) {
     let cal = Calendar.current
@@ -20,44 +21,51 @@ struct CalendarMonthView: View {
     let md = monthMetadata
     let leadingBlanks = md.firstWeekday - 1
     let totalCells = leadingBlanks + md.days
-    let rows = Int(ceil(Double(totalCells) / 7.0))
 
-    ScrollView([.vertical, .horizontal]) {
-      VStack(spacing: 12) {
-        LazyVGrid(
-          columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 7), spacing: 12
-        ) {
-          // Header row
-          ForEach(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], id: \.self) { d in
-            Text(d)
-              .font(.caption.weight(.medium))
-              .foregroundColor(.secondary)
-              .frame(maxWidth: .infinity, alignment: .center)
-              .frame(height: 24)
-          }
+    VStack(spacing: 0) {
+      // Calendar grid - no scrolling, full screen
+      LazyVGrid(
+        columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7),
+        spacing: 0
+      ) {
+        // Header row with weekday labels
+        ForEach(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], id: \.self) { day in
+          Text(day)
+            .font(.caption2.weight(.semibold))
+            .foregroundColor(.secondary)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .frame(height: 32)
+            .background(CalendarStyle.panelBackground)
+        }
 
-          // Calendar days
-          ForEach(0..<totalCells, id: \.self) { cellIndex in
-            if cellIndex < leadingBlanks || cellIndex >= totalCells {
-              // Empty cell
-              Rectangle()
-                .fill(Color.clear)
-                .frame(height: 100)
-            } else {
-              // Day cell
-              let dayOffset = cellIndex - leadingBlanks
-              let dayDate = cal.date(byAdding: .day, value: dayOffset, to: md.firstDay)!
-              DayCell(date: dayDate, events: eventsFor(dayDate)) { ev, position in
-                onSelectEvent(ev, position)
-              }
-              .frame(height: 100)
+        // Calendar days
+        ForEach(0..<totalCells, id: \.self) { cellIndex in
+          if cellIndex < leadingBlanks {
+            // Empty cell for leading blanks
+            Rectangle()
+              .fill(Color.clear)
+              .frame(maxHeight: .infinity)
+          } else if cellIndex >= totalCells {
+            // Empty cell for trailing blanks
+            Rectangle()
+              .fill(Color.clear)
+              .frame(maxHeight: .infinity)
+          } else {
+            // Day cell
+            let dayOffset = cellIndex - leadingBlanks
+            let dayDate = cal.date(byAdding: .day, value: dayOffset, to: md.firstDay)!
+            DayCell(date: dayDate, events: eventsFor(dayDate)) { ev, position in
+              onSelectEvent(ev, position)
             }
+            .frame(maxHeight: .infinity)
           }
         }
-        .frame(minWidth: 700, minHeight: 480)
       }
-      .padding(12)
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .background(CalendarStyle.background)
     }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(CalendarStyle.background)
     .enableInjection()
   }
 
@@ -73,30 +81,52 @@ private struct DayCell: View {
   let onSelect: (CalendarEvent, CGPoint) -> Void
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      HStack(spacing: 6) {
-        Text(date, format: .dateTime.weekday(.abbreviated))
-          .font(.caption2)
-          .foregroundColor(.secondary)
-        TodayBadge(date: date)
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
+    VStack(alignment: .leading, spacing: 0) {
+      // Day header
+      HStack {
+        Text(date, format: .dateTime.day())
+          .font(.caption2.weight(.medium))
+          .foregroundColor(date.isToday ? .white : .primary)
+          .padding(.horizontal, 8)
+          .padding(.vertical, 4)
+          .background(
+            Circle()
+              .fill(date.isToday ? Color.accentColor : Color.clear)
+          )
 
-      LazyVStack(alignment: .leading, spacing: 3) {
-        ForEach(events.prefix(3)) { ev in
-          EventButton(event: ev, onSelect: onSelect)
-        }
-        if events.count > 3 {
-          Text("+\(events.count - 3) more").font(.caption2).foregroundColor(.secondary)
-        }
+        Spacer()
       }
-      Spacer(minLength: 0)
+      .frame(height: 28)
+      .padding(.horizontal, 8)
+      .padding(.top, 4)
+
+      // Events section
+      VStack(alignment: .leading, spacing: 2) {
+        ForEach(events.prefix(6)) { event in  // Show more events
+          EventButton(event: event, onSelect: onSelect)
+        }
+
+        if events.count > 6 {
+          Text("+\(events.count - 6) more")
+            .font(.caption2.weight(.medium))
+            .foregroundColor(.secondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 2)
+        }
+
+        Spacer(minLength: 0)
+      }
+      .padding(.horizontal, 4)
+      .padding(.bottom, 4)
     }
-    .padding(10)
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     .background(
-      RoundedRectangle(cornerRadius: CalendarStyle.monthCellCornerRadius)
-        .fill(date.isToday ? CalendarStyle.todayBackground : CalendarStyle.panelBackground)
+      Rectangle()
+        .fill(date.isToday ? CalendarStyle.todayBackground : Color.clear)
+    )
+    .overlay(
+      Rectangle()
+        .stroke(CalendarStyle.gridLine, lineWidth: 0.5)
     )
   }
 }
@@ -104,6 +134,7 @@ private struct DayCell: View {
 private struct EventButton: View {
   let event: CalendarEvent
   let onSelect: (CalendarEvent, CGPoint) -> Void
+  @State private var isHovering = false
 
   var body: some View {
     Button(action: {
@@ -116,12 +147,31 @@ private struct EventButton: View {
         onSelect(event, CGPoint(x: 100, y: 100))  // Fallback position
       }
     }) {
-      HStack(spacing: 6) {
-        Circle().fill(Color(hex: event.colorHex ?? "#5E6AD2")).frame(width: 6, height: 6)
-        Text(event.title).lineLimit(1).font(.caption)
+      HStack(spacing: 4) {
+        Circle()
+          .fill(Color(hex: event.colorHex ?? "#5E6AD2"))
+          .frame(width: 6, height: 6)
+
+        Text(event.title)
+          .font(.caption2.weight(.medium))
+          .lineLimit(1)
+          .foregroundColor(.primary)
+
+        Spacer(minLength: 0)
       }
+      .padding(.horizontal, 6)
+      .padding(.vertical, 2)
+      .background(
+        RoundedRectangle(cornerRadius: 3)
+          .fill(Color(hex: event.colorHex ?? "#5E6AD2").opacity(isHovering ? 0.2 : 0.1))
+      )
+      .overlay(
+        RoundedRectangle(cornerRadius: 3)
+          .stroke(Color(hex: event.colorHex ?? "#5E6AD2").opacity(0.6), lineWidth: 0.5)
+      )
     }
     .buttonStyle(.plain)
+    .onHover { isHovering = $0 }
   }
 }
 

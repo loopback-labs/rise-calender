@@ -43,18 +43,21 @@ extension View {
 enum CalendarStyle {
   // Layout dimensions
   static let hourRowHeight: CGFloat = 60
-  static let dayColumnMinWidth: CGFloat = 150
-  static let dayHeaderHeight: CGFloat = 32
-  static let eventCornerRadius: CGFloat = 4
+  static let dayColumnMinWidth: CGFloat = 160  // Increased for better readability
+  static let dayHeaderHeight: CGFloat = 32  // Increased for better spacing
+  static let eventCornerRadius: CGFloat = 4  // Slightly increased for modern look
   static let monthCellCornerRadius: CGFloat = 6
+  static let monthCellHeight: CGFloat = 120  // Height for month view cells
+  static let monthHeaderHeight: CGFloat = 48  // Height for month header
 
   // Colors matching Mac Calendar
   static var background: Color { Color(NSColor.windowBackgroundColor) }
   static var panelBackground: Color { Color(NSColor.controlBackgroundColor) }
-  static var gridLine: Color { .secondary.opacity(0.15) }
-  static var subtleGridFill: Color { .secondary.opacity(0.04) }
+  static var gridLine: Color { .secondary.opacity(0.15) }  // Slightly more visible
+  static var subtleGridFill: Color { .secondary.opacity(0.04) }  // Slightly more visible
   static var nowLine: Color { .red }
-  static var todayBackground: Color { Color.accentColor.opacity(0.08) }
+  static var todayBackground: Color { Color.accentColor.opacity(0.08) }  // Slightly more visible
+  static var monthGridBackground: Color { Color(NSColor.controlBackgroundColor) }
 }
 
 extension Date {
@@ -67,14 +70,14 @@ struct TodayBadge: View {
     Group {
       if date.isToday {
         Text(date, format: .dateTime.day())
-          .font(.caption2.weight(.semibold))
-          .padding(.horizontal, 6)
-          .padding(.vertical, 2)
-          .background(Capsule().fill(Color.accentColor))
+          .font(.caption2.weight(.bold))  // Made bold for better visibility
+          .padding(.horizontal, 6)  // Increased padding
+          .padding(.vertical, 2)  // Increased padding
+          .background(Circle().fill(Color.accentColor))
           .foregroundColor(.white)
       } else {
         Text(date, format: .dateTime.day())
-          .font(.caption2)
+          .font(.caption2.weight(.medium))  // Made medium weight for consistency
           .foregroundColor(.secondary)
       }
     }
@@ -89,11 +92,11 @@ struct NowIndicator: View {
       let y = CGFloat(minutes) / 60.0 * CalendarStyle.hourRowHeight
       Rectangle()
         .fill(CalendarStyle.nowLine)
-        .frame(height: 1)
+        .frame(height: 2)  // Increased thickness for better visibility
         .offset(y: y)
         .overlay(
-          Circle().fill(CalendarStyle.nowLine).frame(width: 6, height: 6)
-            .offset(x: -3, y: y - 3), alignment: .topLeading
+          Circle().fill(CalendarStyle.nowLine).frame(width: 8, height: 8)  // Increased size
+            .offset(x: -4, y: y - 4), alignment: .topLeading  // Adjusted offset
         )
     }
   }

@@ -13,64 +13,126 @@ struct ContentView: View {
   @State private var selectedEvent: CalendarEvent?
   @State private var showDetails = false
   @State private var eventDetailPosition: CGPoint = .zero
+  @EnvironmentObject private var preferencesManager: PreferencesManager
+
+  private var dateDisplayText: String {
+    switch vm.selectedViewMode {
+    case .day:
+      return vm.selectedDate.formatted(date: .complete, time: .omitted)
+    case .week:
+      let startOfWeek =
+        Calendar.current.date(
+          from: Calendar.current.dateComponents(
+            [.yearForWeekOfYear, .weekOfYear], from: vm.selectedDate)) ?? vm.selectedDate
+      let endOfWeek =
+        Calendar.current.date(byAdding: .day, value: 6, to: startOfWeek) ?? vm.selectedDate
+      return
+        "\(startOfWeek.formatted(date: .abbreviated, time: .omitted)) - \(endOfWeek.formatted(date: .abbreviated, time: .omitted))"
+    case .month:
+      return vm.selectedDate.formatted(.dateTime.month(.wide).year())
+    }
+  }
 
   var body: some View {
     NavigationSplitView {
       VStack(alignment: .leading, spacing: 12) {
+        // Header with title only (settings moved to menu)
         HStack {
+          Text("Calendars")
+            .font(.headline)
+            .foregroundColor(.primary)
+
+          Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.top, 8)
+
+        Divider()
+
+        // Calendars list with color-coded checkboxes
+        ScrollView {
+          LazyVStack(alignment: .leading, spacing: 8) {
+            ForEach(vm.accounts) { account in
+              if let calendars = vm.calendarsByAccount[account.email], !calendars.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                  // Account header
+                  HStack {
+                    Circle()
+                      .fill(Color(hex: account.colorHex))
+                      .frame(width: 8, height: 8)
+                    Text(account.email)
+                      .font(.caption)
+                      .foregroundColor(.secondary)
+                    Spacer()
+                  }
+                  .padding(.horizontal, 12)
+                  .padding(.top, 8)
+
+                  // Calendar checkboxes
+                  ForEach(calendars) { calendar in
+                    CalendarCheckboxRow(
+                      calendar: calendar,
+                      accountEmail: account.email,
+                      vm: vm
+                    )
+                  }
+                }
+              }
+            }
+          }
+          .padding(.bottom, 12)
+        }
+
+        Spacer()
+
+        // Add account button at bottom
+        VStack(spacing: 8) {
+          Divider()
+
           Button {
             if let window = NSApplication.shared.windows.first {
               vm.addGoogleAccount(presentationAnchor: window)
             }
           } label: {
-            Label("Add Google Account", systemImage: "person.crop.circle.badge.plus")
+            Label("Add Calendar Account", systemImage: "person.crop.circle.badge.plus")
+              .frame(maxWidth: .infinity)
           }
+          .buttonStyle(.bordered)
+          .controlSize(.small)
+          .padding(.horizontal, 12)
+          .padding(.bottom, 8)
         }
-        .padding(.bottom, 8)
-
-        List {
-          Section("Connected Accounts") {
-            ForEach(vm.accounts) { account in
-              AccountRow(account: account, vm: vm)
-            }
-          }
-
-          // Calendars section
-          ForEach(vm.accounts) { account in
-            if let calendars = vm.calendarsByAccount[account.email], !calendars.isEmpty {
-              Section(account.email) {
-                ForEach(calendars) { calendar in
-                  CalendarRow(
-                    calendar: calendar,
-                    accountEmail: account.email,
-                    vm: vm
-                  )
-                }
-              }
-            }
-          }
-        }
-        Spacer()
       }
-      .padding(8)
-      .navigationSplitViewColumnWidth(min: 280, ideal: 320)
+      .navigationSplitViewColumnWidth(min: 200, ideal: 240)
     } detail: {
       ZStack {
         VStack(spacing: 0) {
           // Main content area with proper scrolling
-          if vm.selectedViewMode == .month {
-            CalendarMonthView(date: vm.selectedDate, events: vm.events) { ev, position in
-              selectedEvent = ev
-              eventDetailPosition = position
-              showDetails = true
-            }
-            .responsiveLayout()
-          } else {
-            let startOfWeek =
-              Calendar.current.date(
-                from: Calendar.current.dateComponents(
-                  [.yearForWeekOfYear, .weekOfYear], from: vm.selectedDate)) ?? vm.selectedDate
-            Group {
+          Group {
+            switch vm.selectedViewMode {
+            case .day:
+              CalendarDayView(date: vm.selectedDate, events: vm.events) { ev, position in
+                selectedEvent = ev
+                eventDetailPosition = position
+                showDetails = true
+              }
+              .responsiveLayout()
+            case .month:
+              CalendarMonthView(
+                date: vm.selectedDate, events: vm.events,
+                onSelectEvent: { ev, position in
+                  selectedEvent = ev
+                  eventDetailPosition = position
+                  showDetails = true
+                },
+                onNavigateMonth: nil  // Navigation handled by main toolbar
+              )
+              .responsiveLayout()
+            case .week:
+              let startOfWeek =
+                Calendar.current.date(
+                  from: Calendar.current.dateComponents(
+                    [.yearForWeekOfYear, .weekOfYear], from: vm.selectedDate)) ?? vm.selectedDate
               if vm.selectedWeekStyle == .list {
                 CalendarWeekView(startOfWeek: startOfWeek, events: vm.events) { ev, position in
                   selectedEvent = ev
@@ -105,11 +167,13 @@ struct ContentView: View {
       }
       .toolbar {
         ToolbarItemGroup(placement: .navigation) {
-          // Date display - matching Mac Calendar style
-          HStack(spacing: 8) {
-            Text(vm.selectedDate, format: .dateTime.month(.wide).year())
-              .font(.title2.weight(.medium))
-              .frame(minWidth: 160, alignment: .leading)
+          // Date display - only show for day and week views, not month view
+          if vm.selectedViewMode != .month {
+            HStack(spacing: 8) {
+              Text(dateDisplayText)
+                .font(.title2.weight(.medium))
+                .frame(minWidth: 160, alignment: .leading)
+            }
           }
         }
 
@@ -121,77 +185,76 @@ struct ContentView: View {
             }
           }
           .pickerStyle(.segmented)
-          .frame(width: 140)
+          .frame(width: 180)
           .controlSize(.large)
+
+          // Week style toggle - only show when in week view
+          if vm.selectedViewMode == .week {
+            Picker("Week Style", selection: $vm.selectedWeekStyle) {
+              ForEach(AppViewModel.WeekStyle.allCases, id: \.self) { style in
+                Text(style.rawValue).tag(style)
+              }
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 120)
+            .controlSize(.small)
+          }
 
           // Navigation buttons - Mac Calendar style
           Button(action: {
-            vm.selectedDate =
-              Calendar.current.date(
-                byAdding: .day, value: vm.selectedViewMode == .month ? -30 : -7, to: vm.selectedDate
-              ) ?? vm.selectedDate
+            let increment: Int
+            switch vm.selectedViewMode {
+            case .day:
+              increment = -1
+            case .week:
+              increment = -7
+            case .month:
+              increment = -1  // Navigate by month
+            }
+            if vm.selectedViewMode == .month {
+              vm.selectedDate =
+                Calendar.current.date(byAdding: .month, value: increment, to: vm.selectedDate)
+                ?? vm.selectedDate
+            } else {
+              vm.selectedDate =
+                Calendar.current.date(byAdding: .day, value: increment, to: vm.selectedDate)
+                ?? vm.selectedDate
+            }
           }) {
             Image(systemName: "chevron.left")
           }
           .buttonStyle(.borderless)
-          .controlSize(.large)
-
-          Button(action: { vm.selectedDate = Date() }) {
-            Text("Today")
-          }
-          .buttonStyle(.borderless)
-          .controlSize(.large)
 
           Button(action: {
-            vm.selectedDate =
-              Calendar.current.date(
-                byAdding: .day, value: vm.selectedViewMode == .month ? 30 : 7, to: vm.selectedDate)
-              ?? vm.selectedDate
+            let increment: Int
+            switch vm.selectedViewMode {
+            case .day:
+              increment = 1
+            case .week:
+              increment = 7
+            case .month:
+              increment = 1  // Navigate by month
+            }
+            if vm.selectedViewMode == .month {
+              vm.selectedDate =
+                Calendar.current.date(byAdding: .month, value: increment, to: vm.selectedDate)
+                ?? vm.selectedDate
+            } else {
+              vm.selectedDate =
+                Calendar.current.date(byAdding: .day, value: increment, to: vm.selectedDate)
+                ?? vm.selectedDate
+            }
           }) {
             Image(systemName: "chevron.right")
           }
           .buttonStyle(.borderless)
-          .controlSize(.large)
 
-          // Week style picker (only for week view)
-          if vm.selectedViewMode == .week {
-            Picker("Style", selection: $vm.selectedWeekStyle) {
-              ForEach(AppViewModel.WeekStyle.allCases, id: \.self) { s in
-                Text(s.rawValue).tag(s)
-              }
-            }
-            .pickerStyle(.segmented)
-            .frame(width: 140)
-            .controlSize(.large)
-          }
-
-          Spacer()
-
-          // Refresh button
-          Button(action: { Task { await vm.refreshAllAccounts() } }) {
-            Label("Refresh", systemImage: "arrow.clockwise")
+          // Today button
+          Button("Today") {
+            vm.selectedDate = Date()
           }
           .buttonStyle(.borderless)
-          .controlSize(.large)
         }
-      }
-      .onTapGesture {
-        // Dismiss floating detail when clicking outside
-        if showDetails {
-          showDetails = false
-          selectedEvent = nil
-        }
-      }
-      .onChange(of: showDetails) { _, newValue in
-        if !newValue {
-          selectedEvent = nil
-        }
-      }
-    }
-    .overlay(alignment: .bottomTrailing) {
-      if vm.isBusy {
-        ProgressView().padding().background(.ultraThinMaterial).clipShape(
-          RoundedRectangle(cornerRadius: 8))
       }
     }
     .alert("Error", isPresented: .constant(vm.errorMessage != nil)) {
@@ -478,6 +541,67 @@ struct AccountRow: View {
       .padding(.leading, 16)
     }
     .padding(.vertical, 4)
+    .onHover { isHovering = $0 }
+  }
+}
+
+struct CalendarCheckboxRow: View {
+  let calendar: GoogleCalendar
+  let accountEmail: String
+  let vm: AppViewModel
+  @State private var isHovering = false
+  @State private var showColorPicker = false
+
+  var body: some View {
+    HStack(spacing: 8) {
+      // Color-coded checkbox
+      Button(action: {
+        vm.toggleCalendarVisibility(
+          email: accountEmail, calendarId: calendar.id, isVisible: !calendar.isVisible)
+      }) {
+        HStack(spacing: 6) {
+          Image(systemName: calendar.isVisible ? "checkmark.square.fill" : "square")
+            .foregroundColor(Color(hex: calendar.displayColor))
+            .font(.system(size: 12, weight: .medium))
+
+          Text(calendar.summary)
+            .font(.subheadline)
+            .foregroundColor(.primary)
+
+          Spacer(minLength: 0)
+        }
+      }
+      .buttonStyle(.plain)
+
+      // Color picker button
+      Button(action: { showColorPicker.toggle() }) {
+        Circle()
+          .fill(Color(hex: calendar.displayColor))
+          .frame(width: 10, height: 10)
+          .overlay(
+            Circle()
+              .stroke(Color.primary.opacity(0.2), lineWidth: 1)
+          )
+      }
+      .buttonStyle(.plain)
+      .opacity(isHovering ? 1 : 0.6)
+      .popover(isPresented: $showColorPicker) {
+        ColorPickerView(
+          selectedColor: calendar.displayColor,
+          onColorSelected: { color in
+            vm.updateCalendarColor(email: accountEmail, calendarId: calendar.id, color: color)
+            showColorPicker = false
+          }
+        )
+        .frame(width: 200, height: 150)
+      }
+    }
+    .padding(.horizontal, 12)
+    .padding(.vertical, 4)
+    .background(
+      RoundedRectangle(cornerRadius: 4)
+        .fill(isHovering ? Color(NSColor.controlBackgroundColor) : Color.clear)
+    )
     .onHover { isHovering = $0 }
   }
 }
