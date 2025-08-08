@@ -9,45 +9,102 @@ struct CalendarDayView: View {
   private let hours: [Int] = Array(0...23)
 
   var body: some View {
-    GeometryReader { geometry in
-      VStack(spacing: 0) {
-        // All-day events section
-        AllDayEventsDayRow(date: date, events: events, onSelectEvent: onSelectEvent)
-          .frame(height: 72)
-          .padding(.horizontal, 16)
-          .padding(.vertical, 12)
+    ScrollViewReader { proxy in
+      ScrollView([.vertical, .horizontal], showsIndicators: false) {
+        VStack(spacing: 0) {
+          // All-day events section
+          AllDayEventsDayRow(date: date, events: allDayEvents, onSelectEvent: onSelectEvent)
+            .frame(height: 72)
+            .padding(.horizontal, CalendarStyle.spacingXLarge)
+            .padding(.vertical, CalendarStyle.spacingLarge)
 
-        Divider()
-          .padding(.horizontal, 16)
+          Divider()
+            .padding(.horizontal, CalendarStyle.spacingXLarge)
 
-        // Time grid section - fills remaining space
-        HStack(alignment: .top, spacing: 20) {
-          HourGutter(hours: hours)
+          // Time grid section
+          HStack(alignment: .top, spacing: 20) {
+            GridHourGutter(hours: hours)
 
-          // Single day column
-          VStack(spacing: 8) {
-            DayHeader(date: date)
-            DayColumn(day: date, events: eventsFor(date), onSelectEvent: onSelectEvent)
-              .overlay(alignment: .topLeading) {
-                if date.isToday { NowIndicator(startOfDay: date) }
-              }
+            // Single day column
+            VStack(spacing: CalendarStyle.spacingMedium) {
+              GridDayHeader(date: date)
+              GridDayColumn(day: date, events: timedEvents, onSelectEvent: onSelectEvent)
+                .overlay(alignment: .topLeading) {
+                  if date.isToday { NowIndicator(startOfDay: date) }
+                }
+            }
+            .frame(minWidth: CalendarStyle.dayColumnMinWidth, maxWidth: .infinity)
+            .layoutPriority(1)
           }
-          .frame(maxWidth: .infinity)
+          .padding(CalendarStyle.spacingXLarge)
+          .frame(
+            minWidth: CalendarStyle.dayColumnMinWidth + 60 + 20 + 32,
+            minHeight: 24 * CalendarStyle.hourRowHeight
+          )
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(minWidth: CalendarStyle.dayColumnMinWidth + 60 + 20 + 32)
+        .onAppear {
+          // Scroll to current time if viewing today
+          if date.isToday {
+            scrollToCurrentTime(proxy: proxy)
+          }
+        }
+        .onChange(of: date) { newDate in
+          // Scroll to current time when switching to today
+          if newDate.isToday {
+            scrollToCurrentTime(proxy: proxy)
+          }
+        }
       }
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .background(CalendarStyle.background)
+      .scrollIndicators(.hidden)
     }
-    .background(CalendarStyle.background)
     .enableInjection()
   }
 
-  private func eventsFor(_ day: Date) -> [CalendarEvent] {
+  private func scrollToCurrentTime(proxy: ScrollViewProxy) {
+    let now = Date()
     let cal = Calendar.current
-    return events.filter {
-      cal.isDate($0.startDate, inSameDayAs: day) && !isAllDayEvent($0)
+    let currentHour = cal.component(.hour, from: now)
+
+    // Scroll to current hour with some offset
+    let targetHour = max(0, currentHour - 1)  // Show 1 hour before current time
+    withAnimation(.easeInOut(duration: 0.5)) {
+      proxy.scrollTo("hour-\(targetHour)", anchor: .top)
     }
+  }
+
+  // Filter events for the selected day only
+  private var allDayEvents: [CalendarEvent] {
+    let cal = Calendar.current
+    return events.filter { event in
+      // Check if event is on the selected day
+      cal.isDate(event.startDate, inSameDayAs: date) && isAllDayEvent(event)
+    }
+  }
+
+  private var timedEvents: [CalendarEvent] {
+    let cal = Calendar.current
+    return events.filter { event in
+      // Check if event intersects with the selected day
+      // Event starts on the selected day OR event ends on the selected day OR event spans the selected day
+      let eventStartsOnDay = cal.isDate(event.startDate, inSameDayAs: date)
+      let eventEndsOnDay = cal.isDate(event.endDate, inSameDayAs: date)
+      let eventSpansDay = event.startDate < startOfDay && event.endDate > endOfDay
+
+      return (eventStartsOnDay || eventEndsOnDay || eventSpansDay) && !isAllDayEvent(event)
+    }
+  }
+
+  // Helper computed properties for day boundaries
+  private var startOfDay: Date {
+    let cal = Calendar.current
+    return cal.startOfDay(for: date)
+  }
+
+  private var endOfDay: Date {
+    let cal = Calendar.current
+    return cal.date(byAdding: .day, value: 1, to: startOfDay) ?? date
   }
 
   private func isAllDayEvent(_ event: CalendarEvent) -> Bool {
@@ -66,33 +123,31 @@ struct AllDayEventsDayRow: View {
   let onSelectEvent: (CalendarEvent, CGPoint) -> Void
 
   var body: some View {
-    HStack(alignment: .top, spacing: 20) { // Increased spacing
+    HStack(alignment: .top, spacing: 20) {
       // All-day label
       Text("all-day")
-        .font(.caption2.weight(.medium))
+        .font(CalendarStyle.fontCaption.weight(.medium))
         .foregroundColor(.secondary)
-        .frame(width: 60, alignment: .trailing) // Increased width
-        .padding(.top, 6) // Increased padding
+        .frame(width: 60, alignment: .trailing)
+        .padding(.top, 6)
 
-      // Single day column for all-day events
-      AllDayColumn(day: date, events: allDayEventsFor(date), onSelectEvent: onSelectEvent)
-        .frame(minWidth: CalendarStyle.dayColumnMinWidth)
+      // All-day events
+      VStack(alignment: .leading, spacing: 2) {
+        ForEach(events) { event in
+          GridAllDayEventBubble(event: event) {
+            let mouseLocation = NSEvent.mouseLocation
+            if let window = NSApplication.shared.windows.first {
+              let windowPoint = window.convertPoint(fromScreen: mouseLocation)
+              onSelectEvent(event, windowPoint)
+            }
+          }
+        }
+        Spacer(minLength: 0)
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
     }
-  }
-
-  private func allDayEventsFor(_ day: Date) -> [CalendarEvent] {
-    let cal = Calendar.current
-    return events.filter {
-      cal.isDate($0.startDate, inSameDayAs: day) && isAllDayEvent($0)
-    }
-  }
-
-  private func isAllDayEvent(_ event: CalendarEvent) -> Bool {
-    let cal = Calendar.current
-    let startComponents = cal.dateComponents([.hour, .minute, .second], from: event.startDate)
-    let endComponents = cal.dateComponents([.hour, .minute, .second], from: event.endDate)
-
-    return (startComponents.hour == 0 && startComponents.minute == 0 && startComponents.second == 0)
-      && (endComponents.hour == 0 && endComponents.minute == 0 && endComponents.second == 0)
   }
 }
+
+// Note: AllDayEventBubble, HourGutter, DayHeader, DayColumn, and EventBubble
+// are defined in CalendarTimeGridWeekView.swift and shared between views

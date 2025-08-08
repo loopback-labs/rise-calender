@@ -12,8 +12,6 @@ enum MeetingLinkDetector {
       #"https?://teams\.microsoft\.com/l/meetup-join/[A-Za-z0-9/_\-\?&=\.]+"#,
       #"https?://([a-zA-Z0-9\-]+)\.webex\.com/[A-Za-z0-9/_\-\?&=\.]+"#,
       #"https?://(www\.)?bluejeans\.com/[A-Za-z0-9\-]+"#,
-      // Common Hangouts/old Meet alias
-      #"https?://hangouts\.google\.com/[^"]+"#,
     ]
 
     for pattern in patterns {

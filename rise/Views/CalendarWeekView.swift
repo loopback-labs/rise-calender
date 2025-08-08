@@ -8,119 +8,145 @@ struct CalendarWeekView: View {
 
   var body: some View {
     ScrollView {
-      VStack(alignment: .leading, spacing: 12) {
-        Text(weekRangeTitle)
-          .font(.headline)
-          .foregroundColor(.secondary)
-          .padding(.horizontal, 8)
-
-        ForEach(0..<7, id: \.self) { i in
-          if let day = Calendar.current.date(byAdding: .day, value: i, to: startOfWeek) {
-            DaySection(
-              day: day,
-              events: eventsFor(day),
-              onSelectEvent: onSelectEvent
-            )
-          }
-          if i < 6 {  // Don't add divider after the last day
-            Divider()
-              .padding(.horizontal, 8)
-          }
+      LazyVStack(alignment: .leading, spacing: CalendarStyle.spacingLarge) {
+        ForEach(0..<7, id: \.self) { dayOffset in
+          let day = Calendar.current.date(byAdding: .day, value: dayOffset, to: startOfWeek)!
+          DaySection(
+            date: day,
+            events: eventsFor(day),
+            onSelectEvent: onSelectEvent
+          )
         }
       }
-      .padding(.vertical, 8)
+      .padding(CalendarStyle.spacingXLarge)
     }
+    .background(CalendarStyle.background)
     .enableInjection()
   }
 
   private func eventsFor(_ day: Date) -> [CalendarEvent] {
     let cal = Calendar.current
     return events.filter { cal.isDate($0.startDate, inSameDayAs: day) }
-  }
-}
-
-extension CalendarWeekView {
-  fileprivate var weekRangeTitle: String {
-    let end = Calendar.current.date(byAdding: .day, value: 6, to: startOfWeek) ?? startOfWeek
-    let df = DateFormatter()
-    df.dateFormat = "MMM d"
-    return "\(df.string(from: startOfWeek)) – \(df.string(from: end))"
+      .sorted { $0.startDate < $1.startDate }
   }
 }
 
 private struct DaySection: View {
-  let day: Date
+  let date: Date
   let events: [CalendarEvent]
   let onSelectEvent: (CalendarEvent, CGPoint) -> Void
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      HStack(spacing: 6) {
-        Text(day, format: .dateTime.weekday(.wide))
-          .font(.subheadline)
-          .foregroundColor(.secondary)
-        TodayBadge(date: day)
-      }
-      .padding(.horizontal, 8)
+    VStack(alignment: .leading, spacing: CalendarStyle.spacingMedium) {
+      // Day header
+      HStack {
+        Text(date, format: .dateTime.weekday(.wide))
+          .font(CalendarStyle.fontHeadline.weight(.medium))
+          .foregroundColor(.primary)
 
+        Text(date, format: .dateTime.month().day())
+          .font(CalendarStyle.fontBody)
+          .foregroundColor(.secondary)
+
+        if date.isToday {
+          Text("Today")
+            .font(CalendarStyle.fontCaption.weight(.medium))
+            .padding(.horizontal, CalendarStyle.spacingMedium)
+            .padding(.vertical, CalendarStyle.spacingSmall)
+            .background(
+              RoundedRectangle(cornerRadius: CalendarStyle.eventCornerRadius)
+                .fill(Color.accentColor)
+            )
+            .foregroundColor(.white)
+        }
+
+        Spacer()
+      }
+
+      // Events
       if events.isEmpty {
         Text("No events")
+          .font(CalendarStyle.fontBody)
           .foregroundColor(.secondary)
-          .font(.caption)
-          .padding(.horizontal, 8)
+          .padding(.vertical, CalendarStyle.spacingLarge)
       } else {
-        ForEach(events) { event in
-          WeekEventRow(event: event, onSelect: onSelectEvent)
+        LazyVStack(alignment: .leading, spacing: CalendarStyle.spacingMedium) {
+          ForEach(events) { event in
+            WeekEventRow(event: event) {
+              let mouseLocation = NSEvent.mouseLocation
+              if let window = NSApplication.shared.windows.first {
+                let windowPoint = window.convertPoint(fromScreen: mouseLocation)
+                onSelectEvent(event, windowPoint)
+              }
+            }
+          }
         }
       }
     }
-    .padding(.vertical, 6)
+    .padding(CalendarStyle.spacingLarge)
+    .background(
+      RoundedRectangle(cornerRadius: CalendarStyle.eventCornerRadius)
+        .fill(CalendarStyle.panelBackground)
+    )
   }
 }
 
 private struct WeekEventRow: View {
   let event: CalendarEvent
-  let onSelect: (CalendarEvent, CGPoint) -> Void
+  let onSelect: () -> Void
+  @State private var isHovering = false
 
   var body: some View {
-    Button(action: {
-      // Get the current mouse position relative to the window
-      let mouseLocation = NSEvent.mouseLocation
-      if let window = NSApplication.shared.windows.first {
-        let windowPoint = window.convertPoint(fromScreen: mouseLocation)
-        onSelect(event, windowPoint)
-      } else {
-        onSelect(event, CGPoint(x: 100, y: 100))  // Fallback position
-      }
-    }) {
-      HStack(spacing: 8) {
-        Circle().fill(Color(hex: event.colorHex ?? "#5E6AD2")).frame(width: 8, height: 8)
-        VStack(alignment: .leading, spacing: 2) {
-          Text(titleText)
-            .lineLimit(1)
-            .font(.body)
+    Button(action: onSelect) {
+      HStack(spacing: CalendarStyle.spacingMedium) {
+        // Time
+        VStack(alignment: .leading, spacing: CalendarStyle.spacingSmall) {
+          Text(event.startDate, format: .dateTime.hour().minute())
+            .font(CalendarStyle.fontBody.weight(.medium))
+            .foregroundColor(.primary)
+
+          Text(event.endDate, format: .dateTime.hour().minute())
+            .font(CalendarStyle.fontCaption)
+            .foregroundColor(.secondary)
+        }
+        .frame(width: 60, alignment: .leading)
+
+        // Color indicator
+        Circle()
+          .fill(Color(hex: event.colorHex ?? "#5E6AD2"))
+          .frame(width: CalendarStyle.iconSizeMedium, height: CalendarStyle.iconSizeMedium)
+
+        // Event details
+        VStack(alignment: .leading, spacing: CalendarStyle.spacingSmall) {
+          Text(event.title)
+            .font(CalendarStyle.fontBody.weight(.medium))
+            .foregroundColor(.primary)
+            .lineLimit(2)
+
           if let location = event.location, !location.isEmpty {
             Text(location)
-              .lineLimit(1)
-              .font(.caption)
+              .font(CalendarStyle.fontCaption)
               .foregroundColor(.secondary)
+              .lineLimit(1)
+          }
+
+          if let description = event.description, !description.isEmpty {
+            Text(description)
+              .font(CalendarStyle.fontCaption)
+              .foregroundColor(.secondary)
+              .lineLimit(3)
           }
         }
+
         Spacer()
       }
-      .padding(.horizontal, 8)
-      .padding(.vertical, 6)
+      .padding(CalendarStyle.spacingLarge)
       .background(
         RoundedRectangle(cornerRadius: CalendarStyle.eventCornerRadius)
-          .fill(CalendarStyle.panelBackground)
+          .fill(isHovering ? CalendarStyle.hoverBackground : Color.clear)
       )
-      .padding(.horizontal, 8)
     }
     .buttonStyle(.plain)
-  }
-
-  private var titleText: String {
-    let time = event.startDate.formatted(date: .omitted, time: .shortened)
-    return "\(time) - \(event.title)"
+    .onHover { isHovering = $0 }
   }
 }

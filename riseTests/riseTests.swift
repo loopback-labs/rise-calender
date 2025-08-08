@@ -1,16 +1,5 @@
-//
-//  riseTests.swift
-//  riseTests
-//
-//  Created by Piyush Bhutoria on 08/08/25.
-//
+import XCTest
 
-import Testing
+@testable import rise
 
-struct riseTests {
-
-    @Test func example() async throws {
-        // Write your test here and use APIs like `#expect(...)` to check expected conditions.
-    }
-
-}
+final class riseTests: XCTestCase {}

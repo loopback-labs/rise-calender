@@ -83,7 +83,7 @@ final class GoogleCalendarService {
       guard let id = item["id"] as? String else { continue }
       let summary = (item["summary"] as? String) ?? "(No title)"
       let start = GoogleCalendarService.parseDate(from: item["start"])
-      let end = GoogleCalendarService.parseDate(from: item["end"])  // non-optional fallback not needed
+      let end = GoogleCalendarService.parseDate(from: item["end"])
       let location = item["location"] as? String
       let description = item["description"] as? String
       let url =

@@ -7,22 +7,8 @@ final class AppViewModel: ObservableObject {
   @Published var accounts: [GoogleAccount] = []
   @Published var calendarsByAccount: [String: [GoogleCalendar]] = [:]  // email -> calendars
   @Published var events: [CalendarEvent] = []
-  @Published var selectedViewMode: ViewMode = .week {
-    didSet {
-      saveViewState()
-      DispatchQueue.main.async { [weak self] in
-        self?.adjustWindowSizeForViewMode()
-      }
-    }
-  }
-  @Published var selectedWeekStyle: WeekStyle = .grid {
-    didSet {
-      saveViewState()
-      DispatchQueue.main.async { [weak self] in
-        self?.adjustWindowSizeForViewMode()
-      }
-    }
-  }
+  @Published var selectedViewMode: ViewMode = .week { didSet { saveViewState() } }
+  @Published var selectedWeekStyle: WeekStyle = .grid { didSet { saveViewState() } }
   @Published var selectedDate: Date = Date() { didSet { saveViewState() } }
   @Published var isBusy: Bool = false
   @Published var errorMessage: String?
@@ -53,49 +39,7 @@ final class AppViewModel: ObservableObject {
   }
 
   // MARK: - Window Size Management
-  private func adjustWindowSizeForViewMode() {
-    guard
-      let window = NSApplication.shared.windows.first(where: { $0.isKeyWindow || $0.isMainWindow })
-    else { return }
-
-    let currentFrame = window.frame
-    let minWidth: CGFloat
-    let minHeight: CGFloat
-
-    switch selectedViewMode {
-    case .day:
-      minWidth = 600
-      minHeight = 700
-    case .month:
-      minWidth = 900
-      minHeight = 700
-    case .week:
-      switch selectedWeekStyle {
-      case .list:
-        minWidth = 700
-        minHeight = 600
-      case .grid:
-        minWidth = 1200
-        minHeight = 900
-      }
-    }
-
-    // Only resize if current window is smaller than minimum
-    if currentFrame.width < minWidth || currentFrame.height < minHeight {
-      let newWidth = max(currentFrame.width, minWidth)
-      let newHeight = max(currentFrame.height, minHeight)
-      let newFrame = NSRect(
-        x: currentFrame.origin.x,
-        y: currentFrame.origin.y,
-        width: newWidth,
-        height: newHeight
-      )
-
-      DispatchQueue.main.async {
-        window.setFrame(newFrame, display: true, animate: false)
-      }
-    }
-  }
+  // Removed dynamic content-driven window resizing to let the app use the native window size
 
   func addGoogleAccount(presentationAnchor: ASPresentationAnchor) {
     Task {
@@ -213,6 +157,9 @@ final class AppViewModel: ObservableObject {
       }
     }
   }
+
+  // MARK: - Event Management
+  // Event creation and deletion functionality removed as per user preference
 
   // MARK: - Tokens
   private func saveTokens(_ tokens: OAuthTokens, email: String) throws {

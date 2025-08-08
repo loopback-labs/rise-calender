@@ -21,45 +21,42 @@ struct CalendarMonthView: View {
     let md = monthMetadata
     let leadingBlanks = md.firstWeekday - 1
     let totalCells = leadingBlanks + md.days
+    let fixedCells = 42  // Always render 6 full weeks for consistent month grid
 
     VStack(spacing: 0) {
-      // Calendar grid - fixed layout that fills the window
-      LazyVGrid(
-        columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7),
-        spacing: 0
-      ) {
-        // Header row with weekday labels
-        ForEach(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], id: \.self) { day in
-          Text(day)
-            .font(.caption2.weight(.semibold))
-            .foregroundColor(.secondary)
-            .frame(maxWidth: .infinity, alignment: .center)
-            .frame(height: 32)
-            .background(CalendarStyle.panelBackground)
-        }
+      // Fixed header, aligned with week grid header just below the toolbar
+      MonthWeekdaysHeaderRow()
+        .padding(.horizontal, CalendarStyle.spacingXLarge)
 
-        // Calendar days - fixed height grid
-        ForEach(0..<totalCells, id: \.self) { cellIndex in
-          if cellIndex < leadingBlanks {
-            // Empty cell for leading blanks
-            Rectangle()
-              .fill(Color.clear)
-              .frame(maxHeight: .infinity)
-          } else {
-            // Day cell
+      // Calendar grid fills remaining height with 6 equal rows
+      GeometryReader { proxy in
+        let rows: CGFloat = 6
+        let rowHeight = max(72, floor(proxy.size.height / rows))
+
+        LazyVGrid(
+          columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7),
+          spacing: 0
+        ) {
+          // Calendar days - fixed height grid
+          ForEach(0..<fixedCells, id: \.self) { cellIndex in
+            // Date relative to the first day of the month; supports negative/overflow
             let dayOffset = cellIndex - leadingBlanks
             let dayDate = cal.date(byAdding: .day, value: dayOffset, to: md.firstDay)!
-            DayCell(date: dayDate, events: eventsFor(dayDate)) { ev, position in
-              onSelectEvent(ev, position)
-            }
-            .frame(maxHeight: .infinity)
+            let isCurrentMonth = cal.isDate(dayDate, equalTo: md.firstDay, toGranularity: .month)
+
+            DayCell(
+              date: dayDate,
+              events: isCurrentMonth ? eventsFor(dayDate) : [],
+              isCurrentMonth: isCurrentMonth,
+              onSelect: { ev, position in onSelectEvent(ev, position) }
+            )
+            .frame(height: rowHeight)
           }
         }
+        .padding(.horizontal, CalendarStyle.spacingXLarge)
+        .background(CalendarStyle.background)
       }
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
-      .background(CalendarStyle.background)
     }
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(CalendarStyle.background)
     .enableInjection()
   }
@@ -70,25 +67,41 @@ struct CalendarMonthView: View {
   }
 }
 
+// Fixed month header matching week grid weekday style
+private struct MonthWeekdaysHeaderRow: View {
+  var body: some View {
+    HStack(spacing: 0) {
+      ForEach(Calendar.current.shortWeekdaySymbols, id: \.self) { day in
+        Text(day)
+          .font(CalendarStyle.fontCaption.weight(.medium))
+          .foregroundColor(.secondary)
+          .frame(maxWidth: .infinity)
+          .frame(height: CalendarStyle.dayHeaderHeight)
+      }
+    }
+  }
+}
+
 private struct DayCell: View {
   let date: Date
   let events: [CalendarEvent]
+  let isCurrentMonth: Bool
   let onSelect: (CalendarEvent, CGPoint) -> Void
   @State private var showOverflowPopover = false
   @State private var overflowPopoverPosition: CGPoint = .zero
 
   // Maximum number of events to show before overflow
-  private let maxVisibleEvents = 4
+  private let maxVisibleEvents = 3
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
       // Day header
       HStack {
         Text(date, format: .dateTime.day())
-          .font(.caption2.weight(.medium))
-          .foregroundColor(date.isToday ? .white : .primary)
-          .padding(.horizontal, 8)
-          .padding(.vertical, 4)
+          .font(CalendarStyle.fontCaption.weight(.medium))
+          .foregroundColor(date.isToday ? .white : (isCurrentMonth ? .primary : .secondary))
+          .padding(.horizontal, 4)
+          .padding(.vertical, 2)
           .background(
             Circle()
               .fill(date.isToday ? Color.accentColor : Color.clear)
@@ -96,16 +109,16 @@ private struct DayCell: View {
 
         Spacer()
       }
-      .frame(height: 28)
-      .padding(.horizontal, 8)
-      .padding(.top, 4)
+      .frame(height: 24)
+      .padding(.horizontal, 4)
+      .padding(.top, 2)
 
-      // Events section with fixed height
+      // Events section
       VStack(alignment: .leading, spacing: 1) {
         ForEach(Array(events.prefix(maxVisibleEvents).enumerated()), id: \.element.id) {
           index, event in
           EventButton(event: event, onSelect: onSelect)
-            .frame(height: 20)  // Fixed height for consistent layout
+            .frame(height: 16)  // Fixed height for consistent layout
         }
 
         // Overflow indicator
@@ -119,19 +132,19 @@ private struct DayCell: View {
             }
           }) {
             Text("+\(events.count - maxVisibleEvents) more")
-              .font(.caption2.weight(.medium))
+              .font(CalendarStyle.fontCaption.weight(.medium))
               .foregroundColor(.secondary)
-              .padding(.horizontal, 8)
-              .padding(.vertical, 2)
+              .padding(.horizontal, 4)
+              .padding(.vertical, 1)
           }
           .buttonStyle(.plain)
-          .frame(height: 20)  // Fixed height for consistent layout
+          .frame(height: 16)  // Fixed height for consistent layout
         }
 
         Spacer(minLength: 0)
       }
-      .padding(.horizontal, 4)
-      .padding(.bottom, 4)
+      .padding(.horizontal, 2)
+      .padding(.bottom, 2)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     .background(
@@ -148,7 +161,9 @@ private struct DayCell: View {
         events: Array(events.dropFirst(maxVisibleEvents)),
         onSelectEvent: onSelect
       )
-      .frame(width: 300, height: 400)
+      // Size to content to eliminate extra empty space while capping max height
+      .frame(width: 300)
+      .frame(maxHeight: 400)
     }
   }
 }
@@ -163,18 +178,18 @@ private struct OverflowEventsView: View {
       // Header
       HStack {
         Text(date, format: .dateTime.month().day())
-          .font(.headline.weight(.semibold))
+          .font(CalendarStyle.fontHeadline.weight(.semibold))
         Spacer()
       }
-      .padding(.horizontal, 16)
-      .padding(.vertical, 12)
+      .padding(.horizontal, CalendarStyle.spacingXLarge)
+      .padding(.vertical, CalendarStyle.spacingLarge)
       .background(CalendarStyle.panelBackground)
 
       Divider()
 
       // Events list
       ScrollView {
-        LazyVStack(alignment: .leading, spacing: 8) {
+        LazyVStack(alignment: .leading, spacing: CalendarStyle.spacingMedium) {
           ForEach(events) { event in
             OverflowEventRow(event: event) {
               let mouseLocation = NSEvent.mouseLocation
@@ -185,8 +200,8 @@ private struct OverflowEventsView: View {
             }
           }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, CalendarStyle.spacingXLarge)
+        .padding(.vertical, CalendarStyle.spacingLarge)
       }
     }
     .background(CalendarStyle.background)
@@ -200,10 +215,10 @@ private struct OverflowEventRow: View {
 
   var body: some View {
     Button(action: onSelect) {
-      HStack(spacing: 8) {
+      HStack(spacing: CalendarStyle.spacingMedium) {
         // Time
         Text(event.startDate, format: .dateTime.hour().minute())
-          .font(.caption2.weight(.medium))
+          .font(CalendarStyle.fontCaption)
           .foregroundColor(.secondary)
           .frame(width: 50, alignment: .leading)
 
@@ -212,16 +227,16 @@ private struct OverflowEventRow: View {
           .fill(Color(hex: event.colorHex ?? "#5E6AD2"))
           .frame(width: 8, height: 8)
 
-        // Event title
-        VStack(alignment: .leading, spacing: 2) {
+        // Event details
+        VStack(alignment: .leading, spacing: CalendarStyle.spacingSmall) {
           Text(event.title)
-            .font(.subheadline.weight(.medium))
+            .font(CalendarStyle.fontBody)
             .foregroundColor(.primary)
             .lineLimit(2)
 
           if let location = event.location, !location.isEmpty {
             Text(location)
-              .font(.caption2)
+              .font(CalendarStyle.fontCaption)
               .foregroundColor(.secondary)
               .lineLimit(1)
           }
@@ -229,15 +244,11 @@ private struct OverflowEventRow: View {
 
         Spacer()
       }
-      .padding(.horizontal, 12)
-      .padding(.vertical, 8)
+      .padding(.horizontal, CalendarStyle.spacingMedium)
+      .padding(.vertical, CalendarStyle.spacingSmall)
       .background(
-        RoundedRectangle(cornerRadius: 6)
-          .fill(Color(hex: event.colorHex ?? "#5E6AD2").opacity(isHovering ? 0.1 : 0.05))
-      )
-      .overlay(
-        RoundedRectangle(cornerRadius: 6)
-          .stroke(Color(hex: event.colorHex ?? "#5E6AD2").opacity(0.3), lineWidth: 1)
+        RoundedRectangle(cornerRadius: CalendarStyle.eventCornerRadius)
+          .fill(isHovering ? CalendarStyle.hoverBackground : Color.clear)
       )
     }
     .buttonStyle(.plain)
@@ -252,36 +263,31 @@ private struct EventButton: View {
 
   var body: some View {
     Button(action: {
-      // Get the current mouse position relative to the window
       let mouseLocation = NSEvent.mouseLocation
       if let window = NSApplication.shared.windows.first {
         let windowPoint = window.convertPoint(fromScreen: mouseLocation)
         onSelect(event, windowPoint)
-      } else {
-        onSelect(event, CGPoint(x: 100, y: 100))  // Fallback position
       }
     }) {
-      HStack(spacing: 4) {
+      HStack(spacing: 2) {
+        // Color indicator
         Circle()
           .fill(Color(hex: event.colorHex ?? "#5E6AD2"))
           .frame(width: 6, height: 6)
 
+        // Event title
         Text(event.title)
-          .font(.caption2.weight(.medium))
-          .lineLimit(1)
+          .font(CalendarStyle.fontCaption)
           .foregroundColor(.primary)
+          .lineLimit(1)
 
         Spacer(minLength: 0)
       }
-      .padding(.horizontal, 6)
-      .padding(.vertical, 2)
+      .padding(.horizontal, 2)
+      .padding(.vertical, 1)
       .background(
-        RoundedRectangle(cornerRadius: 3)
-          .fill(Color(hex: event.colorHex ?? "#5E6AD2").opacity(isHovering ? 0.2 : 0.1))
-      )
-      .overlay(
-        RoundedRectangle(cornerRadius: 3)
-          .stroke(Color(hex: event.colorHex ?? "#5E6AD2").opacity(0.6), lineWidth: 0.5)
+        RoundedRectangle(cornerRadius: 2)
+          .fill(isHovering ? CalendarStyle.hoverBackground : Color.clear)
       )
     }
     .buttonStyle(.plain)
