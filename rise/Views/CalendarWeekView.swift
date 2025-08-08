@@ -4,7 +4,7 @@ struct CalendarWeekView: View {
   @ObserveInjection var inject
   let startOfWeek: Date
   let events: [CalendarEvent]
-  let onSelectEvent: (CalendarEvent) -> Void
+  let onSelectEvent: (CalendarEvent, CGPoint) -> Void
 
   var body: some View {
     ScrollView {
@@ -51,7 +51,7 @@ extension CalendarWeekView {
 private struct DaySection: View {
   let day: Date
   let events: [CalendarEvent]
-  let onSelectEvent: (CalendarEvent) -> Void
+  let onSelectEvent: (CalendarEvent, CGPoint) -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
@@ -80,10 +80,19 @@ private struct DaySection: View {
 
 private struct WeekEventRow: View {
   let event: CalendarEvent
-  let onSelect: (CalendarEvent) -> Void
+  let onSelect: (CalendarEvent, CGPoint) -> Void
 
   var body: some View {
-    Button(action: { onSelect(event) }) {
+    Button(action: {
+      // Get the current mouse position relative to the window
+      let mouseLocation = NSEvent.mouseLocation
+      if let window = NSApplication.shared.windows.first {
+        let windowPoint = window.convertPoint(fromScreen: mouseLocation)
+        onSelect(event, windowPoint)
+      } else {
+        onSelect(event, CGPoint(x: 100, y: 100))  // Fallback position
+      }
+    }) {
       HStack(spacing: 8) {
         Circle().fill(Color(hex: event.colorHex ?? "#5E6AD2")).frame(width: 8, height: 8)
         VStack(alignment: .leading, spacing: 2) {

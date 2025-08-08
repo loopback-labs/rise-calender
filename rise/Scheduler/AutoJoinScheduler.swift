@@ -10,7 +10,7 @@ final class AutoJoinScheduler {
 
   func start(getUpcomingEvents: @escaping () -> [CalendarEvent]) {
     timer?.invalidate()
-    timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+    timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
       self?.check(events: getUpcomingEvents())
     }
     RunLoop.main.add(timer!, forMode: .common)
@@ -26,9 +26,9 @@ final class AutoJoinScheduler {
     for event in events {
       guard let url = event.meetingURL else { continue }
       if launchedEventIds.contains(event.id) { continue }
-      // Join if within [-2min, +2min] of the start time
+      // Join if within [-1min, +1min] of the start time
       let delta = event.startDate.timeIntervalSince(now)
-      if delta <= 120 && delta >= -120 {
+      if delta <= 60 && delta >= -60 {
         launchedEventIds.insert(event.id)
         NSWorkspace.shared.open(url)
       }

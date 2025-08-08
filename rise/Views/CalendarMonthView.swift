@@ -4,7 +4,7 @@ struct CalendarMonthView: View {
   @ObserveInjection var inject
   let date: Date
   let events: [CalendarEvent]
-  let onSelectEvent: (CalendarEvent) -> Void
+  let onSelectEvent: (CalendarEvent, CGPoint) -> Void
 
   private var monthMetadata: (firstDay: Date, days: Int, firstWeekday: Int) {
     let cal = Calendar.current
@@ -24,25 +24,33 @@ struct CalendarMonthView: View {
 
     ScrollView([.vertical, .horizontal]) {
       VStack(spacing: 12) {
-        Grid(alignment: .topLeading, horizontalSpacing: 12, verticalSpacing: 12) {
-          GridRow {
-            ForEach(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], id: \.self) { d in
-              Text(d).font(.caption.weight(.medium)).foregroundColor(.secondary)
-                .frame(maxWidth: .infinity, alignment: .center)
-            }
+        LazyVGrid(
+          columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 7), spacing: 12
+        ) {
+          // Header row
+          ForEach(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], id: \.self) { d in
+            Text(d)
+              .font(.caption.weight(.medium))
+              .foregroundColor(.secondary)
+              .frame(maxWidth: .infinity, alignment: .center)
+              .frame(height: 24)
           }
-          ForEach(0..<rows, id: \.self) { row in
-            GridRow {
-              ForEach(0..<7, id: \.self) { col in
-                let cellIndex = row * 7 + col
-                if cellIndex < leadingBlanks || cellIndex >= totalCells {
-                  Rectangle().fill(Color.clear).frame(minHeight: 100)
-                } else {
-                  let dayOffset = cellIndex - leadingBlanks
-                  let dayDate = cal.date(byAdding: .day, value: dayOffset, to: md.firstDay)!
-                  DayCell(date: dayDate, events: eventsFor(dayDate)) { ev in onSelectEvent(ev) }
-                }
+
+          // Calendar days
+          ForEach(0..<totalCells, id: \.self) { cellIndex in
+            if cellIndex < leadingBlanks || cellIndex >= totalCells {
+              // Empty cell
+              Rectangle()
+                .fill(Color.clear)
+                .frame(height: 100)
+            } else {
+              // Day cell
+              let dayOffset = cellIndex - leadingBlanks
+              let dayDate = cal.date(byAdding: .day, value: dayOffset, to: md.firstDay)!
+              DayCell(date: dayDate, events: eventsFor(dayDate)) { ev, position in
+                onSelectEvent(ev, position)
               }
+              .frame(height: 100)
             }
           }
         }
@@ -62,7 +70,7 @@ struct CalendarMonthView: View {
 private struct DayCell: View {
   let date: Date
   let events: [CalendarEvent]
-  let onSelect: (CalendarEvent) -> Void
+  let onSelect: (CalendarEvent, CGPoint) -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
@@ -76,13 +84,7 @@ private struct DayCell: View {
 
       LazyVStack(alignment: .leading, spacing: 3) {
         ForEach(events.prefix(3)) { ev in
-          Button(action: { onSelect(ev) }) {
-            HStack(spacing: 6) {
-              Circle().fill(Color(hex: ev.colorHex ?? "#5E6AD2")).frame(width: 6, height: 6)
-              Text(ev.title).lineLimit(1).font(.caption)
-            }
-          }
-          .buttonStyle(.plain)
+          EventButton(event: ev, onSelect: onSelect)
         }
         if events.count > 3 {
           Text("+\(events.count - 3) more").font(.caption2).foregroundColor(.secondary)
@@ -91,11 +93,35 @@ private struct DayCell: View {
       Spacer(minLength: 0)
     }
     .padding(10)
-    .frame(minHeight: 100, maxHeight: .infinity, alignment: .topLeading)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     .background(
       RoundedRectangle(cornerRadius: CalendarStyle.monthCellCornerRadius)
         .fill(date.isToday ? CalendarStyle.todayBackground : CalendarStyle.panelBackground)
     )
+  }
+}
+
+private struct EventButton: View {
+  let event: CalendarEvent
+  let onSelect: (CalendarEvent, CGPoint) -> Void
+
+  var body: some View {
+    Button(action: {
+      // Get the current mouse position relative to the window
+      let mouseLocation = NSEvent.mouseLocation
+      if let window = NSApplication.shared.windows.first {
+        let windowPoint = window.convertPoint(fromScreen: mouseLocation)
+        onSelect(event, windowPoint)
+      } else {
+        onSelect(event, CGPoint(x: 100, y: 100))  // Fallback position
+      }
+    }) {
+      HStack(spacing: 6) {
+        Circle().fill(Color(hex: event.colorHex ?? "#5E6AD2")).frame(width: 6, height: 6)
+        Text(event.title).lineLimit(1).font(.caption)
+      }
+    }
+    .buttonStyle(.plain)
   }
 }
 

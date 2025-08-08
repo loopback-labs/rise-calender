@@ -1,9 +1,15 @@
 import Foundation
 
-struct GoogleCalendar: Codable, Hashable {
+struct GoogleCalendar: Codable, Hashable, Identifiable {
   let id: String
   let summary: String
   let backgroundColor: String?
+  var isVisible: Bool = true
+  var customColor: String?
+
+  var displayColor: String {
+    return customColor ?? backgroundColor ?? "#4285F4"
+  }
 }
 
 enum GoogleCalendarServiceError: Error, LocalizedError {

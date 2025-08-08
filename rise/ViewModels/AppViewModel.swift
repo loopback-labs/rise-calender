@@ -143,12 +143,24 @@ final class AppViewModel: ObservableObject {
 
       let calendars = try await GoogleCalendarService.shared.listCalendars(
         accessToken: tokens.accessToken)
-      calendarsByAccount[email] = calendars
+
+      // Load saved calendar settings
+      let savedCalendars = loadCalendarSettings(email: email)
+      let mergedCalendars = calendars.map { calendar in
+        var updatedCalendar = calendar
+        if let saved = savedCalendars.first(where: { $0.id == calendar.id }) {
+          updatedCalendar.isVisible = saved.isVisible
+          updatedCalendar.customColor = saved.customColor
+        }
+        return updatedCalendar
+      }
+
+      calendarsByAccount[email] = mergedCalendars
 
       let timeMin = Calendar.current.date(byAdding: .day, value: -14, to: Date()) ?? Date()
       let timeMax = Calendar.current.date(byAdding: .day, value: 60, to: Date()) ?? Date()
       var collected: [CalendarEvent] = []
-      for calendar in calendars {
+      for calendar in mergedCalendars where calendar.isVisible {
         let evs = try await GoogleCalendarService.shared.listEvents(
           accessToken: tokens.accessToken, calendarId: calendar.id, timeMin: timeMin,
           timeMax: timeMax)
@@ -156,7 +168,7 @@ final class AppViewModel: ObservableObject {
           CalendarEvent(
             id: e.id + "|" + email, calendarId: e.calendarId, accountEmail: email, title: e.title,
             startDate: e.startDate, endDate: e.endDate, meetingURL: e.meetingURL,
-            colorHex: calendar.backgroundColor, location: e.location, description: e.description)
+            colorHex: calendar.displayColor, location: e.location, description: e.description)
         }
         collected.append(contentsOf: colored)
       }
@@ -173,6 +185,29 @@ final class AppViewModel: ObservableObject {
     let now = Date()
     let horizon = now.addingTimeInterval(TimeInterval(60 * 60 * hours))
     return events.filter { $0.startDate >= now.addingTimeInterval(-60) && $0.startDate <= horizon }
+  }
+
+  // MARK: - Calendar Management
+  func toggleCalendarVisibility(email: String, calendarId: String, isVisible: Bool) {
+    if var calendars = calendarsByAccount[email] {
+      if let index = calendars.firstIndex(where: { $0.id == calendarId }) {
+        calendars[index].isVisible = isVisible
+        calendarsByAccount[email] = calendars
+        saveCalendarSettings(email: email, calendars: calendars)
+        Task { await refreshAccount(email: email) }
+      }
+    }
+  }
+
+  func updateCalendarColor(email: String, calendarId: String, color: String) {
+    if var calendars = calendarsByAccount[email] {
+      if let index = calendars.firstIndex(where: { $0.id == calendarId }) {
+        calendars[index].customColor = color
+        calendarsByAccount[email] = calendars
+        saveCalendarSettings(email: email, calendars: calendars)
+        Task { await refreshAccount(email: email) }
+      }
+    }
   }
 
   // MARK: - Tokens
@@ -196,6 +231,7 @@ final class AppViewModel: ObservableObject {
   // MARK: - Persistence
   private let accountsPersistenceKey = "rise.google.accounts"
   private let viewStateKey = "rise.ui.state"
+  private let calendarSettingsKey = "rise.calendar.settings."  // suffix with email
 
   private func persistAccounts() {
     do {
@@ -212,6 +248,24 @@ final class AppViewModel: ObservableObject {
     {
       self.accounts = loaded
     }
+  }
+
+  private func saveCalendarSettings(email: String, calendars: [GoogleCalendar]) {
+    do {
+      let data = try JSONEncoder().encode(calendars)
+      UserDefaults.standard.set(data, forKey: calendarSettingsKey + email)
+    } catch {
+      // ignore persistence errors
+    }
+  }
+
+  private func loadCalendarSettings(email: String) -> [GoogleCalendar] {
+    if let data = UserDefaults.standard.data(forKey: calendarSettingsKey + email),
+      let loaded = try? JSONDecoder().decode([GoogleCalendar].self, from: data)
+    {
+      return loaded
+    }
+    return []
   }
 
   // MARK: - UI View State Persistence
