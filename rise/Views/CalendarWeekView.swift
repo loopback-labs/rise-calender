@@ -100,7 +100,7 @@ private struct WeekEventRow: View {
         Spacer()
       }
       .padding(.horizontal, 8)
-      .padding(.vertical, 4)
+      .padding(.vertical, 6)
       .background(
         RoundedRectangle(cornerRadius: CalendarStyle.eventCornerRadius)
           .fill(CalendarStyle.panelBackground)

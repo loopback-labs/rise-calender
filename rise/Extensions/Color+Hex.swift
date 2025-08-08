@@ -37,27 +37,24 @@ extension View {
       .frame(maxWidth: .infinity, maxHeight: .infinity)
       .clipped()
   }
-
-  func adaptivePadding() -> some View {
-    self
-      .padding(.horizontal, 8)
-      .padding(.vertical, 4)
-  }
 }
 
-// MARK: - Shared Calendar Styling (kept here to ensure inclusion in target)
+// MARK: - Mac Calendar Style System
 enum CalendarStyle {
-  static let hourRowHeight: CGFloat = 56
-  static let dayColumnMinWidth: CGFloat = 140
-  static let dayHeaderHeight: CGFloat = 28
-  static let eventCornerRadius: CGFloat = 6
-  static let monthCellCornerRadius: CGFloat = 8
+  // Layout dimensions
+  static let hourRowHeight: CGFloat = 60
+  static let dayColumnMinWidth: CGFloat = 150
+  static let dayHeaderHeight: CGFloat = 32
+  static let eventCornerRadius: CGFloat = 4
+  static let monthCellCornerRadius: CGFloat = 6
 
+  // Colors matching Mac Calendar
   static var background: Color { Color(NSColor.windowBackgroundColor) }
   static var panelBackground: Color { Color(NSColor.controlBackgroundColor) }
-  static var gridLine: Color { .secondary.opacity(0.2) }
-  static var subtleGridFill: Color { .secondary.opacity(0.06) }
+  static var gridLine: Color { .secondary.opacity(0.15) }
+  static var subtleGridFill: Color { .secondary.opacity(0.04) }
   static var nowLine: Color { .red }
+  static var todayBackground: Color { Color.accentColor.opacity(0.08) }
 }
 
 extension Date {

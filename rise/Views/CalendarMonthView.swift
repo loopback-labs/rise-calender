@@ -23,11 +23,11 @@ struct CalendarMonthView: View {
     let rows = Int(ceil(Double(totalCells) / 7.0))
 
     ScrollView([.vertical, .horizontal]) {
-      VStack(spacing: 8) {
-        Grid(alignment: .topLeading, horizontalSpacing: 8, verticalSpacing: 8) {
+      VStack(spacing: 12) {
+        Grid(alignment: .topLeading, horizontalSpacing: 12, verticalSpacing: 12) {
           GridRow {
             ForEach(["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], id: \.self) { d in
-              Text(d).font(.caption).foregroundColor(.secondary)
+              Text(d).font(.caption.weight(.medium)).foregroundColor(.secondary)
                 .frame(maxWidth: .infinity, alignment: .center)
             }
           }
@@ -36,7 +36,7 @@ struct CalendarMonthView: View {
               ForEach(0..<7, id: \.self) { col in
                 let cellIndex = row * 7 + col
                 if cellIndex < leadingBlanks || cellIndex >= totalCells {
-                  Rectangle().fill(Color.clear).frame(minHeight: 92)
+                  Rectangle().fill(Color.clear).frame(minHeight: 100)
                 } else {
                   let dayOffset = cellIndex - leadingBlanks
                   let dayDate = cal.date(byAdding: .day, value: dayOffset, to: md.firstDay)!
@@ -48,7 +48,7 @@ struct CalendarMonthView: View {
         }
         .frame(minWidth: 700, minHeight: 480)
       }
-      .padding(8)
+      .padding(12)
     }
     .enableInjection()
   }
@@ -65,7 +65,7 @@ private struct DayCell: View {
   let onSelect: (CalendarEvent) -> Void
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 6) {
+    VStack(alignment: .leading, spacing: 8) {
       HStack(spacing: 6) {
         Text(date, format: .dateTime.weekday(.abbreviated))
           .font(.caption2)
@@ -74,7 +74,7 @@ private struct DayCell: View {
       }
       .frame(maxWidth: .infinity, alignment: .leading)
 
-      LazyVStack(alignment: .leading, spacing: 2) {
+      LazyVStack(alignment: .leading, spacing: 3) {
         ForEach(events.prefix(3)) { ev in
           Button(action: { onSelect(ev) }) {
             HStack(spacing: 6) {
@@ -90,11 +90,11 @@ private struct DayCell: View {
       }
       Spacer(minLength: 0)
     }
-    .padding(8)
-    .frame(minHeight: 92, maxHeight: .infinity, alignment: .topLeading)
+    .padding(10)
+    .frame(minHeight: 100, maxHeight: .infinity, alignment: .topLeading)
     .background(
       RoundedRectangle(cornerRadius: CalendarStyle.monthCellCornerRadius)
-        .fill(CalendarStyle.panelBackground)
+        .fill(date.isToday ? CalendarStyle.todayBackground : CalendarStyle.panelBackground)
     )
   }
 }

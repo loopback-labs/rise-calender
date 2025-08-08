@@ -5,8 +5,6 @@
 //  Created by Piyush Bhutoria on 08/08/25.
 //
 
-import AuthenticationServices
-import SwiftData
 import SwiftUI
 
 struct ContentView: View {
@@ -28,6 +26,7 @@ struct ContentView: View {
           }
         }
         .padding(.bottom, 8)
+
         List {
           Section("Connected Accounts") {
             ForEach(vm.accounts) { account in
@@ -93,16 +92,16 @@ struct ContentView: View {
       }
       .toolbar {
         ToolbarItemGroup(placement: .navigation) {
-          // Date display
+          // Date display - matching Mac Calendar style
           HStack(spacing: 8) {
             Text(vm.selectedDate, format: .dateTime.month(.wide).year())
-              .font(.headline)
+              .font(.title2.weight(.medium))
               .frame(minWidth: 160, alignment: .leading)
           }
         }
 
         ToolbarItemGroup(placement: .primaryAction) {
-          // View mode picker
+          // View mode picker - Mac Calendar style
           Picker("View", selection: $vm.selectedViewMode) {
             ForEach(AppViewModel.ViewMode.allCases, id: \.self) { m in
               Text(m.rawValue).tag(m)
@@ -111,7 +110,7 @@ struct ContentView: View {
           .pickerStyle(.segmented)
           .frame(width: 140)
 
-          // Navigation buttons
+          // Navigation buttons - Mac Calendar style
           Button(action: {
             vm.selectedDate =
               Calendar.current.date(
@@ -120,10 +119,12 @@ struct ContentView: View {
           }) {
             Image(systemName: "chevron.left")
           }
+          .buttonStyle(.borderless)
 
           Button(action: { vm.selectedDate = Date() }) {
             Text("Today")
           }
+          .buttonStyle(.borderless)
 
           Button(action: {
             vm.selectedDate =
@@ -133,6 +134,7 @@ struct ContentView: View {
           }) {
             Image(systemName: "chevron.right")
           }
+          .buttonStyle(.borderless)
 
           // Week style picker (only for week view)
           if vm.selectedViewMode == .week {
@@ -151,10 +153,18 @@ struct ContentView: View {
           Button(action: { Task { await vm.refreshAllAccounts() } }) {
             Label("Refresh", systemImage: "arrow.clockwise")
           }
+          .buttonStyle(.borderless)
         }
       }
-      .sheet(isPresented: $showDetails, onDismiss: { selectedEvent = nil }) {
-        if let ev = selectedEvent { EventDetailView(event: ev) }
+      .popover(isPresented: $showDetails, arrowEdge: .top) {
+        if let ev = selectedEvent {
+          EventDetailView(event: ev)
+        }
+      }
+      .onChange(of: showDetails) { _, newValue in
+        if !newValue {
+          selectedEvent = nil
+        }
       }
     }
     .overlay(alignment: .bottomTrailing) {

@@ -13,12 +13,12 @@ struct CalendarTimeGridWeekView: View {
     let minHeight = 24 * CalendarStyle.hourRowHeight
 
     ScrollView([.vertical, .horizontal]) {
-      HStack(alignment: .top, spacing: 12) {
+      HStack(alignment: .top, spacing: 16) {
         HourGutter(hours: hours)
         // 7 day columns
         ForEach(0..<7, id: \.self) { col in
           let day = Calendar.current.date(byAdding: .day, value: col, to: startOfWeek)!
-          VStack(spacing: 4) {
+          VStack(spacing: 6) {
             DayHeader(date: day)
             DayColumn(day: day, events: eventsFor(day), onSelectEvent: onSelectEvent)
               .overlay(alignment: .topLeading) { if day.isToday { NowIndicator(startOfDay: day) } }
@@ -26,7 +26,7 @@ struct CalendarTimeGridWeekView: View {
           .frame(minWidth: CalendarStyle.dayColumnMinWidth)
         }
       }
-      .padding(8)
+      .padding(12)
       .frame(minWidth: minWidth, minHeight: minHeight)
     }
     .background(CalendarStyle.background)
@@ -45,7 +45,7 @@ private struct HourGutter: View {
     VStack(alignment: .trailing, spacing: 0) {
       ForEach(hours, id: \.self) { h in
         Text(hourLabel(h))
-          .font(.caption2)
+          .font(.caption2.weight(.medium))
           .foregroundColor(.secondary)
           .frame(width: 54, height: CalendarStyle.hourRowHeight, alignment: .topTrailing)
       }
@@ -64,13 +64,13 @@ private struct DayHeader: View {
   var body: some View {
     HStack(spacing: 6) {
       Text(date, format: .dateTime.weekday(.abbreviated))
-        .font(.caption)
+        .font(.caption.weight(.medium))
         .foregroundColor(date.isToday ? .primary : .secondary)
       TodayBadge(date: date)
     }
     .frame(height: CalendarStyle.dayHeaderHeight)
     .frame(maxWidth: .infinity)
-    .background(date.isToday ? Color.accentColor.opacity(0.08) : .clear)
+    .background(date.isToday ? CalendarStyle.todayBackground : .clear)
   }
 }
 
@@ -111,13 +111,6 @@ private struct DayColumn: View {
   }
 }
 
-extension CalendarTimeGridWeekView {
-  fileprivate func hourLabel(_ h: Int) -> String {
-    let date = Calendar.current.date(bySettingHour: h, minute: 0, second: 0, of: Date()) ?? Date()
-    return date.formatted(date: .omitted, time: .shortened)
-  }
-}
-
 private struct EventBubble: View {
   let event: CalendarEvent
   let onSelect: (CalendarEvent) -> Void
@@ -130,7 +123,7 @@ private struct EventBubble: View {
           .fill(tint)
           .frame(width: 3)
           .cornerRadius(1.5)
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 3) {
           Text(event.startDate.formatted(date: .omitted, time: .shortened))
             .font(.caption2.weight(.semibold))
           Text(event.title)
@@ -145,7 +138,7 @@ private struct EventBubble: View {
         }
         Spacer(minLength: 0)
       }
-      .padding(6)
+      .padding(8)
       .background(
         RoundedRectangle(cornerRadius: CalendarStyle.eventCornerRadius)
           .fill(tint.opacity(isHovering ? 0.22 : 0.16))

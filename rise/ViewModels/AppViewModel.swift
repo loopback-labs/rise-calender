@@ -63,16 +63,16 @@ final class AppViewModel: ObservableObject {
 
     switch selectedViewMode {
     case .month:
-      minWidth = 800
-      minHeight = 600
+      minWidth = 900
+      minHeight = 700
     case .week:
       switch selectedWeekStyle {
       case .list:
-        minWidth = 600
-        minHeight = 500
+        minWidth = 700
+        minHeight = 600
       case .grid:
-        minWidth = 1200
-        minHeight = 800
+        minWidth = 1400
+        minHeight = 900
       }
     }
 
@@ -87,7 +87,6 @@ final class AppViewModel: ObservableObject {
         height: newHeight
       )
 
-      // Use a more conservative approach to avoid crashes
       DispatchQueue.main.async {
         window.setFrame(newFrame, display: true, animate: false)
       }
@@ -240,9 +239,6 @@ final class AppViewModel: ObservableObject {
       UserDefaults.standard.set(data, forKey: viewStateKey)
     }
   }
-
-  // Expose a no-op wrapper so views can explicitly trigger save when needed
-  func performSaveViewState() { saveViewState() }
 
   // MARK: - Mutations
   func updateAutoJoin(email: String, enabled: Bool) {
