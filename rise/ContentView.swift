@@ -167,13 +167,11 @@ struct ContentView: View {
       }
       .toolbar {
         ToolbarItemGroup(placement: .navigation) {
-          // Date display - only show for day and week views, not month view
-          if vm.selectedViewMode != .month {
-            HStack(spacing: 8) {
-              Text(dateDisplayText)
-                .font(.title2.weight(.medium))
-                .frame(minWidth: 160, alignment: .leading)
-            }
+          // Date display - show for all views including month view
+          HStack(spacing: 8) {
+            Text(dateDisplayText)
+              .font(.title2.weight(.medium))
+              .frame(minWidth: 160, alignment: .leading)
           }
         }
 
