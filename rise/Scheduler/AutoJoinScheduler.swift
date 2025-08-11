@@ -25,6 +25,8 @@ final class AutoJoinScheduler {
     let now = Date()
     for event in events {
       guard let url = event.meetingURL else { continue }
+      // Only join events the user has accepted
+      if event.selfResponse != .accepted { continue }
       if launchedEventIds.contains(event.id) { continue }
       // Join if within [-1min, +1min] of the start time
       let delta = event.startDate.timeIntervalSince(now)

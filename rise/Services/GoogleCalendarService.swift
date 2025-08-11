@@ -52,9 +52,13 @@ final class GoogleCalendarService {
     }
   }
 
-  func listEvents(accessToken: String, calendarId: String, timeMin: Date, timeMax: Date)
-    async throws -> [CalendarEvent]
-  {
+  func listEvents(
+    accessToken: String,
+    calendarId: String,
+    timeMin: Date,
+    timeMax: Date,
+    selfEmail: String
+  ) async throws -> [CalendarEvent] {
     let base = URL(string: "https://www.googleapis.com/calendar/v3/calendars")!
     let eventsURL = base.appendingPathComponent(calendarId).appendingPathComponent("events")
     var comps = URLComponents(url: eventsURL, resolvingAgainstBaseURL: false)!
@@ -91,10 +95,13 @@ final class GoogleCalendarService {
         ?? MeetingLinkDetector.detect(
           in: [location, description].compactMap { $0 }.joined(separator: "\n"))
       let calId = calendarId
+      let response = GoogleCalendarService.extractSelfResponse(from: item, selfEmail: selfEmail)
       results.append(
         CalendarEvent(
           id: id, calendarId: calId, accountEmail: "", title: summary, startDate: start,
-          endDate: end, meetingURL: url, colorHex: nil, location: location, description: description
+          endDate: end, meetingURL: url, colorHex: nil, location: location,
+          description: description,
+          selfResponse: response
         ))
     }
     return results
@@ -142,5 +149,42 @@ final class GoogleCalendarService {
       }
     }
     return Date()
+  }
+
+  private static func extractSelfResponse(from item: [String: Any], selfEmail: String)
+    -> AttendeeResponse?
+  {
+    // Google Calendar event: attendees: [{email, responseStatus}], organizer: {email}
+    if let attendees = item["attendees"] as? [[String: Any]] {
+      if let me = attendees.first(where: {
+        ($0["email"] as? String)?.lowercased() == selfEmail.lowercased()
+      }) {
+        if let status = me["responseStatus"] as? String {
+          return mapGoogleResponse(status)
+        }
+      }
+    }
+    // If user is the organizer, some events may omit attendees entry
+    if let organizer = item["organizer"] as? [String: Any],
+      let orgEmail = organizer["email"] as? String,
+      orgEmail.lowercased() == selfEmail.lowercased()
+    {
+      // Treat organizer as accepted for auto-join purposes unless explicitly declined (rare)
+      if let status = organizer["responseStatus"] as? String {
+        return mapGoogleResponse(status)
+      }
+      return .accepted
+    }
+    return nil
+  }
+
+  private static func mapGoogleResponse(_ status: String) -> AttendeeResponse {
+    switch status.lowercased() {
+    case "accepted": return .accepted
+    case "declined": return .declined
+    case "tentative": return .tentative
+    case "needsaction": return .needsAction
+    default: return .unknown
+    }
   }
 }

@@ -148,12 +148,13 @@ final class AppViewModel: ObservableObject {
       for calendar in mergedCalendars where calendar.isVisible {
         let evs = try await GoogleCalendarService.shared.listEvents(
           accessToken: tokens.accessToken, calendarId: calendar.id, timeMin: timeMin,
-          timeMax: timeMax)
+          timeMax: timeMax, selfEmail: email)
         let colored = evs.map { e in
           CalendarEvent(
             id: e.id + "|" + email, calendarId: e.calendarId, accountEmail: email, title: e.title,
             startDate: e.startDate, endDate: e.endDate, meetingURL: e.meetingURL,
-            colorHex: calendar.displayColor, location: e.location, description: e.description)
+            colorHex: calendar.displayColor, location: e.location, description: e.description,
+            selfResponse: e.selfResponse)
         }
         collected.append(contentsOf: colored)
       }

@@ -63,6 +63,30 @@ struct EventDetailPopover: View {
             )
           }
 
+          // Your response
+          if let response = event.selfResponse {
+            VStack(alignment: .leading, spacing: CalendarStyle.spacingSmall) {
+              Text("Your Response")
+                .font(CalendarStyle.fontBody.weight(.medium))
+                .foregroundColor(.primary)
+
+              let display = responseDisplay(response)
+              HStack(spacing: CalendarStyle.spacingSmall) {
+                Circle()
+                  .fill(display.color)
+                  .frame(width: 10, height: 10)
+                Text(display.text)
+                  .font(CalendarStyle.fontBody)
+                  .foregroundColor(.primary)
+              }
+              .padding(CalendarStyle.spacingSmall)
+              .background(
+                RoundedRectangle(cornerRadius: CalendarStyle.eventCornerRadius)
+                  .fill(CalendarStyle.panelBackground)
+              )
+            }
+          }
+
           // Location
           if let location = event.location, !location.isEmpty {
             VStack(alignment: .leading, spacing: CalendarStyle.spacingSmall) {
@@ -137,5 +161,20 @@ struct EventDetailPopover: View {
     .frame(width: 360)
     .background(CalendarStyle.background)
     .enableInjection()
+  }
+
+  private func responseDisplay(_ response: AttendeeResponse) -> (text: String, color: Color) {
+    switch response {
+    case .accepted:
+      return ("Accepted", .green)
+    case .declined:
+      return ("Declined", .red)
+    case .tentative:
+      return ("Tentative", .orange)
+    case .needsAction:
+      return ("No response", .secondary)
+    case .unknown:
+      return ("Unknown", .secondary)
+    }
   }
 }

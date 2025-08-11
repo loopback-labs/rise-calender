@@ -11,4 +11,13 @@ struct CalendarEvent: Identifiable, Hashable, Codable {
   let colorHex: String?
   let location: String?
   let description: String?
+  let selfResponse: AttendeeResponse?
+}
+
+enum AttendeeResponse: String, Codable, Hashable {
+  case accepted
+  case declined
+  case tentative
+  case needsAction
+  case unknown
 }
