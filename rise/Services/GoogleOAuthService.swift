@@ -1,5 +1,4 @@
 import AuthenticationServices
-// MARK: - Crypto helpers
 import CryptoKit
 import Foundation
 
@@ -99,7 +98,6 @@ final class GoogleOAuthService: NSObject {
   {
     let codeVerifier = Self.randomBase64URL(length: 64)
     let codeChallenge = Self.sha256Base64URL(codeVerifier)
-    // Google recommends ":/oauth2redirect/google" for installed apps (iOS)
     let redirectURI = "\(config.redirectScheme):/oauth2redirect/google"
 
     var components = URLComponents(url: authURL, resolvingAgainstBaseURL: false)!

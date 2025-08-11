@@ -1,6 +1,5 @@
 import SwiftUI
 
-// MARK: - Shared UI Components
 // Colored checkbox toggle style used in the sidebar calendar list
 struct ColoredCheckboxStyle: ToggleStyle {
   let color: Color
@@ -35,7 +34,6 @@ struct ColoredCheckboxStyle: ToggleStyle {
 // Shared layout constants to keep sidebar items perfectly aligned across views
 private enum SidebarLayout {
   static let sideInset: CGFloat = 16
-  // Account header has a 12pt color dot plus default spacing; indent rows/actions to align text
   static let nestedInset: CGFloat = sideInset + 20
   static let rowHeight: CGFloat = 28
 }
@@ -244,5 +242,3 @@ struct AddAccountView: View {
     @ObserveInjection var forceRedraw
   #endif
 }
-
-// (moved to top for clarity and to satisfy linter symbol resolution)

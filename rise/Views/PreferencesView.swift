@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct PreferencesView: View {
-  @ObserveInjection var inject
   @StateObject var vm: AppViewModel
   @State private var selectedTab = "Accounts"
 
@@ -13,7 +12,6 @@ struct PreferencesView: View {
 
   var body: some View {
     HStack(spacing: 0) {
-      // Fixed sidebar - non-collapsible
       VStack(spacing: 0) {
         List(tabs, id: \.0, selection: $selectedTab) { tab in
           Label(tab.0, systemImage: tab.1)
@@ -26,7 +24,6 @@ struct PreferencesView: View {
 
       Divider()
 
-      // Detail content area (scrollable)
       ScrollView {
         Group {
           switch selectedTab {
@@ -48,7 +45,7 @@ struct PreferencesView: View {
     .frame(
       minWidth: CalendarStyle.preferencesMinWidth, minHeight: CalendarStyle.preferencesMinHeight
     )
-    .enableInjection()
+
   }
 }
 
@@ -91,18 +88,14 @@ struct AccountsPreferencesView: View {
       Spacer()
     }
     .padding(CalendarStyle.preferencesSpacingLarge)
-    .enableInjection()
+
   }
 
-  #if DEBUG
-    @ObserveInjection var forceRedraw
-  #endif
 }
 
 struct AccountPreferencesRow: View {
   let account: GoogleAccount
   @ObservedObject var vm: AppViewModel
-  @State private var isExpanded = false
 
   var body: some View {
     VStack(alignment: .leading, spacing: CalendarStyle.preferencesSpacingMedium) {
@@ -188,7 +181,7 @@ struct AccountPreferencesRow: View {
             .stroke(CalendarStyle.eventBorder, lineWidth: 1)
         )
     )
-    .enableInjection()
+
   }
 
   #if DEBUG
@@ -302,7 +295,7 @@ struct CalendarPreferencesRow: View {
     .onChange(of: calendar.displayColor) { newColor in
       hexInput = newColor
     }
-    .enableInjection()
+
   }
 
   private func applyColorChange() {
@@ -387,12 +380,9 @@ struct GeneralPreferencesView: View {
       Spacer()
     }
     .padding(CalendarStyle.preferencesSpacingLarge)
-    .enableInjection()
+
   }
 
-  #if DEBUG
-    @ObserveInjection var forceRedraw
-  #endif
 }
 
 struct AdvancedPreferencesView: View {
@@ -488,10 +478,16 @@ struct AdvancedPreferencesView: View {
       Spacer()
     }
     .padding(CalendarStyle.preferencesSpacingLarge)
-    .enableInjection()
+
   }
 
   #if DEBUG
     @ObserveInjection var forceRedraw
   #endif
 }
+
+#if DEBUG
+  #Preview {
+    PreferencesView(vm: AppViewModel())
+  }
+#endif

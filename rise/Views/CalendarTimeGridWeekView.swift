@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct CalendarTimeGridWeekView: View {
-  @ObserveInjection var inject
   let startOfWeek: Date
   let events: [CalendarEvent]
   let onSelectEvent: (CalendarEvent, CGPoint) -> Void
@@ -36,37 +35,24 @@ struct CalendarTimeGridWeekView: View {
                   if day.isToday { NowIndicator(startOfDay: day) }
                 }
             }
-            .frame(minWidth: CalendarStyle.dayColumnMinWidth, maxWidth: .infinity)
+            .frame(minWidth: CalendarStyle.dayColumnMinWidth / 2, maxWidth: .infinity)
             .layoutPriority(1)
           }
         }
         .padding(CalendarStyle.spacingXLarge)
-        .frame(
-          minWidth: 7 * CalendarStyle.dayColumnMinWidth + 60 + 20 * 8 + 32,
-          minHeight: 24 * CalendarStyle.hourRowHeight
-        )
+
       }
-      .frame(minWidth: 7 * CalendarStyle.dayColumnMinWidth + 60 + 20 * 8 + 32)
+
     }
     .background(CalendarStyle.background)
     .scrollIndicators(.hidden)
-    .enableInjection()
   }
 
   private func eventsFor(_ day: Date) -> [CalendarEvent] {
     let cal = Calendar.current
     return events.filter {
-      cal.isDate($0.startDate, inSameDayAs: day) && !isAllDayEvent($0)
+      cal.isDate($0.startDate, inSameDayAs: day) && !$0.isAllDay
     }
-  }
-
-  private func isAllDayEvent(_ event: CalendarEvent) -> Bool {
-    let cal = Calendar.current
-    let startComponents = cal.dateComponents([.hour, .minute, .second], from: event.startDate)
-    let endComponents = cal.dateComponents([.hour, .minute, .second], from: event.endDate)
-
-    return (startComponents.hour == 0 && startComponents.minute == 0 && startComponents.second == 0)
-      && (endComponents.hour == 0 && endComponents.minute == 0 && endComponents.second == 0)
   }
 }
 
@@ -88,30 +74,20 @@ struct AllDayEventsRow: View {
       ForEach(0..<7, id: \.self) { col in
         let day = Calendar.current.date(byAdding: .day, value: col, to: startOfWeek)!
         AllDayColumn(day: day, events: allDayEventsFor(day), onSelectEvent: onSelectEvent)
-          .frame(minWidth: CalendarStyle.dayColumnMinWidth, maxWidth: .infinity)
+          .frame(maxWidth: .infinity)
       }
     }
-      .enableInjection()
   }
 
   #if DEBUG
-  @ObserveInjection var forceRedraw
+    @ObserveInjection var forceRedraw
   #endif
 
   private func allDayEventsFor(_ day: Date) -> [CalendarEvent] {
     let cal = Calendar.current
     return events.filter {
-      cal.isDate($0.startDate, inSameDayAs: day) && isAllDayEvent($0)
+      cal.isDate($0.startDate, inSameDayAs: day) && $0.isAllDay
     }
-  }
-
-  private func isAllDayEvent(_ event: CalendarEvent) -> Bool {
-    let cal = Calendar.current
-    let startComponents = cal.dateComponents([.hour, .minute, .second], from: event.startDate)
-    let endComponents = cal.dateComponents([.hour, .minute, .second], from: event.endDate)
-
-    return (startComponents.hour == 0 && startComponents.minute == 0 && startComponents.second == 0)
-      && (endComponents.hour == 0 && endComponents.minute == 0 && endComponents.second == 0)
   }
 }
 
@@ -133,12 +109,9 @@ struct AllDayColumn: View {
       }
       Spacer(minLength: 0)
     }
-      .enableInjection()
+
   }
 
-  #if DEBUG
-  @ObserveInjection var forceRedraw
-  #endif
 }
 
 struct GridAllDayEventBubble: View {
@@ -173,12 +146,8 @@ struct GridAllDayEventBubble: View {
     }
     .buttonStyle(.plain)
     .onHover { isHovering = $0 }
-      .enableInjection()
   }
 
-  #if DEBUG
-  @ObserveInjection var forceRedraw
-  #endif
 }
 
 struct GridHourGutter: View {
@@ -229,15 +198,11 @@ struct GridWeekHeaderRow: View {
       ForEach(0..<7, id: \.self) { col in
         let day = Calendar.current.date(byAdding: .day, value: col, to: startOfWeek)!
         GridDayHeader(date: day)
-          .frame(minWidth: CalendarStyle.dayColumnMinWidth, maxWidth: .infinity)
+          .frame(maxWidth: .infinity)
       }
     }
-      .enableInjection()
   }
 
-  #if DEBUG
-  @ObserveInjection var forceRedraw
-  #endif
 }
 
 struct GridDayHeader: View {
@@ -260,11 +225,11 @@ struct GridDayHeader: View {
     }
     .frame(height: CalendarStyle.dayHeaderHeight)
     .background(date.isToday ? CalendarStyle.todayBackground : .clear)
-      .enableInjection()
+
   }
 
   #if DEBUG
-  @ObserveInjection var forceRedraw
+    @ObserveInjection var forceRedraw
   #endif
 }
 
@@ -304,14 +269,13 @@ struct GridDayColumn: View {
         }
       }
     }
-      .enableInjection()
+
   }
 
   #if DEBUG
-  @ObserveInjection var forceRedraw
+    @ObserveInjection var forceRedraw
   #endif
 
-  // MARK: - Layout
   private struct PositionedEvent {
     let event: CalendarEvent
     let columnIndex: Int
@@ -446,10 +410,10 @@ private struct GridEventBubble: View {
     .frame(height: eventPosition.height - 1)  // avoid touching grid line
     .offset(y: eventPosition.top + 0.5)  // center within the hour row
     .onHover { isHovering = $0 }
-      .enableInjection()
+
   }
 
   #if DEBUG
-  @ObserveInjection var forceRedraw
+    @ObserveInjection var forceRedraw
   #endif
 }

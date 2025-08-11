@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct CalendarDayView: View {
-  @ObserveInjection var inject
   let date: Date
   let events: [CalendarEvent]
   let onSelectEvent: (CalendarEvent, CGPoint) -> Void
@@ -10,7 +9,9 @@ struct CalendarDayView: View {
 
   var body: some View {
     ScrollViewReader { proxy in
-      ScrollView([.vertical, .horizontal], showsIndicators: false) {
+      // Day view only needs vertical scrolling; using vertical-only ensures the content
+      // expands to the full window width for better legibility
+      ScrollView(.vertical, showsIndicators: false) {
         VStack(spacing: 0) {
           // All-day events section
           AllDayEventsDayRow(date: date, events: allDayEvents, onSelectEvent: onSelectEvent)
@@ -33,16 +34,15 @@ struct CalendarDayView: View {
                   if date.isToday { NowIndicator(startOfDay: date) }
                 }
             }
-            .frame(minWidth: CalendarStyle.dayColumnMinWidth, maxWidth: .infinity)
+            .frame(minWidth: 360, maxWidth: .infinity)
             .layoutPriority(1)
           }
           .padding(CalendarStyle.spacingXLarge)
-          .frame(
-            minWidth: CalendarStyle.dayColumnMinWidth + 60 + 20 + 32,
-            minHeight: 24 * CalendarStyle.hourRowHeight
-          )
+          .frame(maxWidth: .infinity, alignment: .leading)
+
         }
-        .frame(minWidth: CalendarStyle.dayColumnMinWidth + 60 + 20 + 32)
+        .frame(maxWidth: .infinity)
+
         .onAppear {
           // Scroll to current time if viewing today
           if date.isToday {
@@ -59,7 +59,6 @@ struct CalendarDayView: View {
       .background(CalendarStyle.background)
       .scrollIndicators(.hidden)
     }
-    .enableInjection()
   }
 
   private func scrollToCurrentTime(proxy: ScrollViewProxy) {
@@ -79,7 +78,7 @@ struct CalendarDayView: View {
     let cal = Calendar.current
     return events.filter { event in
       // Check if event is on the selected day
-      cal.isDate(event.startDate, inSameDayAs: date) && isAllDayEvent(event)
+      cal.isDate(event.startDate, inSameDayAs: date) && event.isAllDay
     }
   }
 
@@ -92,7 +91,7 @@ struct CalendarDayView: View {
       let eventEndsOnDay = cal.isDate(event.endDate, inSameDayAs: date)
       let eventSpansDay = event.startDate < startOfDay && event.endDate > endOfDay
 
-      return (eventStartsOnDay || eventEndsOnDay || eventSpansDay) && !isAllDayEvent(event)
+      return (eventStartsOnDay || eventEndsOnDay || eventSpansDay) && !event.isAllDay
     }
   }
 
@@ -107,14 +106,6 @@ struct CalendarDayView: View {
     return cal.date(byAdding: .day, value: 1, to: startOfDay) ?? date
   }
 
-  private func isAllDayEvent(_ event: CalendarEvent) -> Bool {
-    let cal = Calendar.current
-    let startComponents = cal.dateComponents([.hour, .minute, .second], from: event.startDate)
-    let endComponents = cal.dateComponents([.hour, .minute, .second], from: event.endDate)
-
-    return (startComponents.hour == 0 && startComponents.minute == 0 && startComponents.second == 0)
-      && (endComponents.hour == 0 && endComponents.minute == 0 && endComponents.second == 0)
-  }
 }
 
 struct AllDayEventsDayRow: View {
@@ -146,13 +137,6 @@ struct AllDayEventsDayRow: View {
       }
       .frame(maxWidth: .infinity, alignment: .leading)
     }
-      .enableInjection()
   }
 
-  #if DEBUG
-  @ObserveInjection var forceRedraw
-  #endif
 }
-
-// Note: AllDayEventBubble, HourGutter, DayHeader, DayColumn, and EventBubble
-// are defined in CalendarTimeGridWeekView.swift and shared between views

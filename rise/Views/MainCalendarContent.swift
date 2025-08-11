@@ -53,11 +53,6 @@ struct MainCalendarContent: View {
             selectedEvent = event
             popoverAnchorPoint = point
             isDetailSidebarVisible = true
-          },
-          onNavigateMonth: { increment in
-            vm.selectedDate =
-              Calendar.current.date(byAdding: .month, value: increment, to: vm.selectedDate)
-              ?? vm.selectedDate
           }
         )
       }
@@ -167,4 +162,10 @@ struct CalendarToolbar: ToolbarContent {
   }
 }
 
-// Intentionally left without additional extensions to reduce redundancy
+#if DEBUG
+  #Preview {
+    MainCalendarContent(
+      vm: AppViewModel(), selectedEvent: .constant(nil), isDetailSidebarVisible: .constant(false),
+      popoverAnchorPoint: .constant(nil))
+  }
+#endif

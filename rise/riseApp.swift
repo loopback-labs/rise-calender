@@ -60,7 +60,7 @@ public class InjectionObserver: ObservableObject {
     var cancellable: AnyCancellable? = nil
     let publisher = PassthroughSubject<Void, Never>()
     init() {
-        _ = loadInjectionOnce // .enableInjection() optional Xcode 16+
+        _ = loadInjectionOnce.enableInjection() // optional Xcode 16+
         cancellable = NotificationCenter.default.publisher(for:
             Notification.Name("INJECTION_BUNDLE_NOTIFICATION"))
             .sink { [weak self] change in

@@ -8,43 +8,40 @@ struct ContentView: View {
   @State private var popoverAnchorPoint: CGPoint?
 
   var body: some View {
-    NavigationSplitView(
-      sidebar: {
-        CalendarSidebar(vm: vm)
-      },
-      content: {
-        MainCalendarContent(
-          vm: vm,
-          selectedEvent: $selectedEvent,
-          isDetailSidebarVisible: $isDetailSidebarVisible,
-          popoverAnchorPoint: $popoverAnchorPoint
-        )
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-          AnchoredPopover(
-            isPresented: $isDetailSidebarVisible,
-            anchorPointInWindow: popoverAnchorPoint,
-            onClose: {
-              selectedEvent = nil
-              isDetailSidebarVisible = false
-            }
-          ) {
-            if let event = selectedEvent {
-              EventDetailPopover(
-                event: event,
-                onDismiss: {
-                  selectedEvent = nil
-                  isDetailSidebarVisible = false
-                }
-              )
-            } else {
-              EmptyView()
-            }
+    // Use a two-column split view (sidebar + detail) to avoid an extra adjustable middle column
+    NavigationSplitView {
+      CalendarSidebar(vm: vm)
+    } detail: {
+      MainCalendarContent(
+        vm: vm,
+        selectedEvent: $selectedEvent,
+        isDetailSidebarVisible: $isDetailSidebarVisible,
+        popoverAnchorPoint: $popoverAnchorPoint
+      )
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .background(
+        AnchoredPopover(
+          isPresented: $isDetailSidebarVisible,
+          anchorPointInWindow: popoverAnchorPoint,
+          onClose: {
+            selectedEvent = nil
+            isDetailSidebarVisible = false
           }
-        )
-      },
-      detail: { EmptyView() }
-    )
+        ) {
+          if let event = selectedEvent {
+            EventDetailPopover(
+              event: event,
+              onDismiss: {
+                selectedEvent = nil
+                isDetailSidebarVisible = false
+              }
+            )
+          } else {
+            EmptyView()
+          }
+        }
+      )
+    }
     .background(CalendarStyle.background)
     .toolbar { CalendarToolbar(vm: vm) }
     .alert("Error", isPresented: .constant(vm.errorMessage != nil)) {
@@ -54,6 +51,4 @@ struct ContentView: View {
     }
     .enableInjection()
   }
-
-  // navigateDate removed; navigation logic centralized in `CalendarToolbar`
 }

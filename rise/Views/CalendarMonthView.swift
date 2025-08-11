@@ -1,11 +1,9 @@
 import SwiftUI
 
 struct CalendarMonthView: View {
-  @ObserveInjection var inject
   let date: Date
   let events: [CalendarEvent]
   let onSelectEvent: (CalendarEvent, CGPoint) -> Void
-  let onNavigateMonth: ((Int) -> Void)?  // Callback for month navigation
 
   private var monthMetadata: (firstDay: Date, days: Int, firstWeekday: Int) {
     let cal = Calendar.current
@@ -24,41 +22,31 @@ struct CalendarMonthView: View {
     let fixedCells = 42  // Always render 6 full weeks for consistent month grid
 
     VStack(spacing: 0) {
-      // Fixed header, aligned with week grid header just below the toolbar
       MonthWeekdaysHeaderRow()
         .padding(.horizontal, CalendarStyle.spacingXLarge)
 
-      // Calendar grid fills remaining height with 6 equal rows
-      GeometryReader { proxy in
-        let rows: CGFloat = 6
-        let rowHeight = max(72, floor(proxy.size.height / rows))
+      LazyVGrid(
+        columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7),
+        spacing: 0
+      ) {
+        ForEach(0..<fixedCells, id: \.self) { cellIndex in
+          let dayOffset = cellIndex - leadingBlanks
+          let dayDate = cal.date(byAdding: .day, value: dayOffset, to: md.firstDay)!
+          let isCurrentMonth = cal.isDate(dayDate, equalTo: md.firstDay, toGranularity: .month)
 
-        LazyVGrid(
-          columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7),
-          spacing: 0
-        ) {
-          // Calendar days - fixed height grid
-          ForEach(0..<fixedCells, id: \.self) { cellIndex in
-            // Date relative to the first day of the month; supports negative/overflow
-            let dayOffset = cellIndex - leadingBlanks
-            let dayDate = cal.date(byAdding: .day, value: dayOffset, to: md.firstDay)!
-            let isCurrentMonth = cal.isDate(dayDate, equalTo: md.firstDay, toGranularity: .month)
-
-            DayCell(
-              date: dayDate,
-              events: isCurrentMonth ? eventsFor(dayDate) : [],
-              isCurrentMonth: isCurrentMonth,
-              onSelect: { ev, position in onSelectEvent(ev, position) }
-            )
-            .frame(height: rowHeight)
-          }
+          DayCell(
+            date: dayDate,
+            events: isCurrentMonth ? eventsFor(dayDate) : [],
+            isCurrentMonth: isCurrentMonth,
+            onSelect: { ev, position in onSelectEvent(ev, position) }
+          )
+          .frame(height: CalendarStyle.monthCellHeight)
         }
-        .padding(.horizontal, CalendarStyle.spacingXLarge)
-        .background(CalendarStyle.background)
       }
+      .padding(.horizontal, CalendarStyle.spacingXLarge)
+      .background(CalendarStyle.background)
     }
     .background(CalendarStyle.background)
-    .enableInjection()
   }
 
   private func eventsFor(_ day: Date) -> [CalendarEvent] {
@@ -67,7 +55,6 @@ struct CalendarMonthView: View {
   }
 }
 
-// Fixed month header matching week grid weekday style
 private struct MonthWeekdaysHeaderRow: View {
   var body: some View {
     HStack(spacing: 0) {
@@ -79,12 +66,8 @@ private struct MonthWeekdaysHeaderRow: View {
           .frame(height: CalendarStyle.dayHeaderHeight)
       }
     }
-      .enableInjection()
   }
 
-  #if DEBUG
-  @ObserveInjection var forceRedraw
-  #endif
 }
 
 private struct DayCell: View {
@@ -96,7 +79,7 @@ private struct DayCell: View {
   @State private var overflowPopoverPosition: CGPoint = .zero
 
   // Maximum number of events to show before overflow
-  private let maxVisibleEvents = 3
+  private let maxVisibleEvents = 4
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
@@ -170,12 +153,8 @@ private struct DayCell: View {
       .frame(width: 300)
       .frame(maxHeight: 400)
     }
-      .enableInjection()
   }
 
-  #if DEBUG
-  @ObserveInjection var forceRedraw
-  #endif
 }
 
 private struct OverflowEventsView: View {
@@ -215,12 +194,7 @@ private struct OverflowEventsView: View {
       }
     }
     .background(CalendarStyle.background)
-      .enableInjection()
   }
-
-  #if DEBUG
-  @ObserveInjection var forceRedraw
-  #endif
 }
 
 private struct OverflowEventRow: View {
@@ -268,12 +242,8 @@ private struct OverflowEventRow: View {
     }
     .buttonStyle(.plain)
     .onHover { isHovering = $0 }
-      .enableInjection()
   }
 
-  #if DEBUG
-  @ObserveInjection var forceRedraw
-  #endif
 }
 
 private struct EventButton: View {
@@ -315,4 +285,8 @@ private struct EventButton: View {
   }
 }
 
-// Color(hex:) extension moved to Extensions/Color+Hex.swift
+#if DEBUG
+  #Preview {
+    CalendarMonthView(date: Date(), events: [], onSelectEvent: { _, _ in })
+  }
+#endif
