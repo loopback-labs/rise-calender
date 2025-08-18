@@ -74,7 +74,7 @@ This document outlines security considerations and best practices for the Rise a
 If you discover a security vulnerability, please:
 
 1. **Do not** create a public issue
-2. Email security details to [INSERT SECURITY EMAIL]
+2. Email security details to piyush.bhutoria@gmail.com
 3. Include detailed steps to reproduce
 4. Allow time for investigation and fix
 
