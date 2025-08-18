@@ -57,7 +57,10 @@ A native macOS application for managing multiple Google Calendar accounts with i
 - **CalendarMonthView**: Month grid layout with event previews
 - **CalendarWeekView**: List-based week view with scrolling support
 - **CalendarTimeGridWeekView**: Time-based grid layout for detailed scheduling
-- **EventDetailView**: Detailed event information display
+- **CalendarDayView**: Focused single-day view
+- **MainCalendarContent**: Orchestrates the active calendar content and interactions
+- **CalendarSidebar**: Account and calendar controls
+- **EventDetailPopover**: Detailed event information display
 
 ### Data Models
 
@@ -81,13 +84,17 @@ A native macOS application for managing multiple Google Calendar accounts with i
    - "+X more" indicators for overflow
    - Responsive grid that adapts to window size
 
-2. **Week List View**
+2. **Day View**
+   - Focused single-day schedule
+   - Precise time positioning
+
+3. **Week List View**
    - Clean list format organized by day
    - Event details with time and location
    - Smooth scrolling support
    - Empty state handling
 
-3. **Week Grid View**
+4. **Week Grid View**
    - Time-based grid layout
    - Hour-by-hour scheduling view
    - Event positioning by actual time
@@ -133,7 +140,7 @@ A native macOS application for managing multiple Google Calendar accounts with i
    - Bundle ID: `com.yourdomain.rise` (or your preferred bundle ID)
 5. Copy the Client ID from the credentials
 
-**Choose one of these configuration methods:**
+Environment variables take precedence over the plist file. Choose one of these configuration methods:
 
 #### Method 1: Environment Variables (Recommended)
 
@@ -158,6 +165,16 @@ export GOOGLE_REDIRECT_SCHEME="com.googleusercontent.apps.your-client-id"
 2. Replace `YOUR_GOOGLE_CLIENT_ID` with your actual Client ID in both fields
 
 For detailed setup instructions, see [rise/Config/README.md](rise/Config/README.md).
+
+### Build and Install (Script)
+
+From the repository root, you can build and install the app to `/Applications` using the helper script:
+
+```bash
+bash install.sh
+```
+
+This will run an Xcode Release build and copy `rise.app` into `/Applications`, then launch it.
 
 ### Usage
 
@@ -187,14 +204,21 @@ For detailed setup instructions, see [rise/Config/README.md](rise/Config/README.
 - [x] Smooth scrolling support
 - [x] Native macOS integration
 
+### 🤖 Auto-Join Behavior
+
+- Joins meetings only for events you have accepted
+- Checks for upcoming events every 60 seconds
+- Launches meeting links within ±1 minute of the event start time
+- Meeting link detection prefers Google Calendar's conference data; falls back to URL recognition for Google Meet, Zoom, Microsoft Teams, Webex, and BlueJeans
+
 ### 🔧 Technical Highlights
 
 - **SwiftUI**: Modern declarative UI framework
-- **SwiftData**: Local data persistence
 - **Combine**: Reactive programming for state management
-- **Keychain Services**: Secure credential storage
+- **Keychain Services + UserDefaults**: Secure credential storage and local persistence
+- **ASWebAuthenticationSession + PKCE**: OAuth 2.0 authentication flow
 - **URLSession**: Network communication
-- **Background Tasks**: Intelligent scheduling
+- **Background timers (AutoJoinScheduler)**: Intelligent scheduling for auto-join
 
 ## 🤝 Contributing
 
